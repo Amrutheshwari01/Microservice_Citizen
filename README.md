@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # AgriLink — Citizen Identity & Wallet Service (CIS-M1 to M6)
 
 > **Microservice 2 of the AgriLink Ecosystem**  
@@ -109,3 +110,6 @@ Generates optimized, minified production assets into the `dist/` folder.
 - **Typography**: Google Fonts (*Outfit*, *Plus Jakarta Sans*, *JetBrains Mono*)
 - **Icons**: Lucide Icons
 - **Effects**: Canvas Confetti for verification celebration
+=======
+# Microservice_Citizen
+>>>>>>> 13383c289f82cea495c0944363d557d2af896898
