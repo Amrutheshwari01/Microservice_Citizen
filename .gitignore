@@ -1,0 +1,11 @@
+.venv/
+.venv311/
+__pycache__/
+.env
+.pytest_cache/
+*.pyc
+.idea/
+.vscode/
+schema_inventory.json
+_inspect_schema.py
+_print_public_schema.py

@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+
+  # ── Citizen Identity & Wallet API ────────────────────────────────────────
+  cis-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agrilink-cis-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env                  # All secrets live in .env – never hardcode here
+    environment:
+      - DEBUG=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - agrilink-net
+
+networks:
+  agrilink-net:
+    name: agrilink-network
+    driver: bridge
+
+# ── Notes ──────────────────────────────────────────────────────────────────
+# 1. Database is hosted on Supabase (cloud) – no local Postgres service needed.
+# 2. To start in development mode:
+#      docker compose up --build
+# 3. To run with hot-reload locally (without Docker):
+#      .venv311\Scripts\uvicorn app.main:app --reload --port 8000
+# 4. For production deployment to AWS ECS, reference .env values from
+#    AWS Secrets Manager or SSM Parameter Store – never bake secrets into images.
