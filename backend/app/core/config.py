@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = ""
     TWILIO_PHONE_NUMBER: str = ""
     TWILIO_MESSAGING_SERVICE_SID: str = ""
+    TWILIO_VERIFY_SERVICE_SID: str = ""
 
     # CORS
     CORS_ORIGINS: List[str] = [

@@ -80,11 +80,12 @@ class AuthService:
                 status="ACTIVE",
             )
 
-            # 2. Profile
+            # 2. Profile (saves captured registration photo)
             self.repo.create_profile(
                 citizen_id=citizen.id,
                 preferred_language=req.preferred_language,
                 nationality_code=req.nationality_code,
+                profile_photo_ref=getattr(req, "face_image", None),
             )
 
             # 3. Credentials
@@ -159,6 +160,7 @@ class AuthService:
                     self.repo.save_biometric(
                         citizen_id=citizen.id,
                         embedding=embedding,
+                        photo_url=req.face_image,
                         model_name=provider_name,
                         biometric_type="FACE",
                     )
