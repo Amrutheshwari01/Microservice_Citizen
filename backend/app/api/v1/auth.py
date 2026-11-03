@@ -65,7 +65,7 @@ def request_otp(
     return service.request_otp(
         destination=req.destination,
         purpose=req.purpose,
-        channel=getattr(req, "channel", "SMS") or "SMS"
+        channel=getattr(req, "channel", "SMS") or "SMS",
     )
 
 

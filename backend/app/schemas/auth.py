@@ -98,9 +98,7 @@ class OtpRequestSchema(BaseModel):
     purpose: str = Field(
         "LOGIN", description="Purpose: REGISTER, LOGIN, RECOVERY, CONTACT_VERIFY"
     )
-    channel: str = Field(
-        "SMS", description="Delivery channel: SMS or WHATSAPP"
-    )
+    channel: str = Field("SMS", description="Delivery channel: SMS or WHATSAPP")
 
     @field_validator("purpose")
     @classmethod

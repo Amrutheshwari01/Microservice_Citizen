@@ -103,11 +103,11 @@ class TwilioSmsService:
                     logger.warning(
                         f"Twilio Verify ({channel_clean}) error {resp.status_code}: {resp.text}"
                     )
-                    
+
                     trial_note = ""
                     if error_code == 21608:
                         trial_note = " (Twilio Trial Account: add your phone number as a Verified Caller ID in Twilio Console to receive real-time messages)."
-                    
+
                     return {
                         "success": True,
                         "provider": "twilio",
@@ -129,7 +129,7 @@ class TwilioSmsService:
 
         # 2. Option B: Standard Twilio Messages API (supports SMS and WhatsApp)
         url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
-        
+
         if channel_clean == "whatsapp":
             target_to = f"whatsapp:{cleaned_phone}"
             target_from = "whatsapp:+14155238886"  # Official Twilio WhatsApp Sandbox
