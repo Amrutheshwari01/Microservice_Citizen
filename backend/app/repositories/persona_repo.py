@@ -13,9 +13,11 @@ class PersonaRepository:
         self.db = db
 
     def get_all_for_citizen(self, citizen_id: uuid.UUID) -> List[Persona]:
-        stmt = select(Persona).where(
-            Persona.citizen_id == citizen_id
-        ).order_by(Persona.created_at.asc())
+        stmt = (
+            select(Persona)
+            .where(Persona.citizen_id == citizen_id)
+            .order_by(Persona.created_at.asc())
+        )
         return list(self.db.scalars(stmt).all())
 
     def get_by_id(self, persona_id: uuid.UUID) -> Optional[Persona]:
@@ -68,7 +70,9 @@ class PersonaRepository:
             decision=decision,
             reviewer_citizen_id=reviewer_citizen_id,
             reason_code=reason_code,
-            reviewed_at=datetime.utcnow() if decision in ("APPROVED", "REJECTED") else None,
+            reviewed_at=(
+                datetime.utcnow() if decision in ("APPROVED", "REJECTED") else None
+            ),
             created_at=datetime.utcnow(),
         )
         self.db.add(approval)
@@ -81,7 +85,7 @@ class PersonaRepository:
             .where(
                 and_(
                     Persona.citizen_id == citizen_id,
-                    Persona.is_default == True,
+                    Persona.is_default,
                 )
             )
             .values(is_default=False)

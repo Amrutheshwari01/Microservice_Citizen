@@ -1,12 +1,11 @@
 import ipaddress
-from typing import Any, Dict, Optional
+from typing import Optional
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db
 from app.services.auth_service import AuthService
 from app.api.v1.dependencies import get_current_token_meta
-from app.models.citizen import Citizen
 from app.schemas.auth import (
     CitizenRegisterRequest,
     CitizenRegisterResponse,
@@ -121,7 +120,12 @@ def logout(
 ):
     citizen, jti, exp = meta
     service = AuthService(db)
-    service.logout(citizen_id=citizen.id, token_jti=jti, token_exp=exp, refresh_token=req.refresh_token)
+    service.logout(
+        citizen_id=citizen.id,
+        token_jti=jti,
+        token_exp=exp,
+        refresh_token=req.refresh_token,
+    )
     return {
         "success": True,
         "message": "Logged out successfully. Token has been revoked.",

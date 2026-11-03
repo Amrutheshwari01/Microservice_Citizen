@@ -1,4 +1,5 @@
 """Schemas for Admin operations (approvals, audit logs, limits)."""
+
 from __future__ import annotations
 
 import uuid

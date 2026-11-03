@@ -3,9 +3,9 @@ Persona schemas.
 Maps to: personas + persona_approvals tables.
 Frontend alias: BUYER -> CUSTOMER, DELIVERY_PERSON -> DELIVERY_PARTNER
 """
+
 import uuid
-from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -33,30 +33,42 @@ RESTRICTED_PERSONA_TYPES = {"FARMER", "AGGREGATOR", "DELIVERY_PARTNER"}
 
 
 class PersonaApplyRequest(BaseModel):
-    persona_type: str = Field(..., description="CUSTOMER | BUYER | FARMER | AGGREGATOR | DELIVERY_PARTNER | DELIVERY_PERSON")
+    persona_type: str = Field(
+        ...,
+        description="CUSTOMER | BUYER | FARMER | AGGREGATOR | DELIVERY_PARTNER | DELIVERY_PERSON",
+    )
     display_name: Optional[str] = Field(None, max_length=120)
-    notes: Optional[str] = Field(None, max_length=500, description="Additional info for admin review")
-    fpo_name: Optional[str] = Field(None, max_length=200, description="FPO name for FARMER persona")
-    license_ref: Optional[str] = Field(None, max_length=100, description="License reference for DELIVERY_PARTNER")
+    notes: Optional[str] = Field(
+        None, max_length=500, description="Additional info for admin review"
+    )
+    fpo_name: Optional[str] = Field(
+        None, max_length=200, description="FPO name for FARMER persona"
+    )
+    license_ref: Optional[str] = Field(
+        None, max_length=100, description="License reference for DELIVERY_PARTNER"
+    )
 
     @field_validator("persona_type")
     @classmethod
     def normalize_persona(cls, v: str) -> str:
         mapped = PERSONA_ALIAS_MAP.get(v.upper())
         if not mapped:
-            raise ValueError(f"Invalid persona type: {v}. Valid: {list(PERSONA_ALIAS_MAP.keys())}")
+            raise ValueError(
+                f"Invalid persona type: {v}. Valid: {list(PERSONA_ALIAS_MAP.keys())}"
+            )
         return mapped
 
 
 class PersonaActivateRequest(BaseModel):
     """Sets a persona as the default active persona."""
+
     pass
 
 
 class PersonaResponse(BaseModel):
     id: uuid.UUID
-    persona_type: str               # DB value
-    persona_type_display: str       # UI alias
+    persona_type: str  # DB value
+    persona_type_display: str  # UI alias
     status: str
     is_default: bool
     display_name: Optional[str]

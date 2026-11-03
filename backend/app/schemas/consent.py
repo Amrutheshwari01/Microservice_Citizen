@@ -1,4 +1,5 @@
 """Pydantic schemas for citizen consent management."""
+
 from __future__ import annotations
 
 import uuid
@@ -25,7 +26,9 @@ class ConsentResponse(BaseModel):
 class ConsentUpdateRequest(BaseModel):
     """Toggle or update a consent record."""
 
-    granted: bool = Field(..., description="Set True to grant, False to withdraw consent")
+    granted: bool = Field(
+        ..., description="Set True to grant, False to withdraw consent"
+    )
 
 
 class ConsentListResponse(BaseModel):

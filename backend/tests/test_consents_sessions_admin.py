@@ -2,10 +2,9 @@
 
 Runs against the live Supabase PostgreSQL database.
 """
-import io
+
 import uuid
 import secrets
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -19,22 +18,28 @@ def _register_citizen(suffix: str = None) -> dict:
     suffix = suffix or uuid.uuid4().hex[:8]
     mobile = f"+9191{secrets.randbelow(90000000) + 10000000:08d}"
     email = f"cis_{suffix}@agrilink.in"
-    res = client.post("/api/v1/auth/register", json={
-        "full_name": f"Test Citizen {suffix}",
-        "email": email,
-        "mobile": mobile,
-        "password": "SecurePass@2026",
-        "confirm_password": "SecurePass@2026",
-    })
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": f"Test Citizen {suffix}",
+            "email": email,
+            "mobile": mobile,
+            "password": "SecurePass@2026",
+            "confirm_password": "SecurePass@2026",
+        },
+    )
     assert res.status_code == 201, res.text
     return res.json()
 
 
 def _login(identifier: str) -> dict:
-    res = client.post("/api/v1/auth/login", json={
-        "identifier": identifier,
-        "password": "SecurePass@2026",
-    })
+    res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "identifier": identifier,
+            "password": "SecurePass@2026",
+        },
+    )
     assert res.status_code == 200, res.text
     return res.json()
 
@@ -44,6 +49,7 @@ def _auth_headers(token: str) -> dict:
 
 
 # ── Consents Tests ─────────────────────────────────────────────────────────────
+
 
 class TestConsents:
     def test_list_and_toggle_consents(self):
@@ -82,6 +88,7 @@ class TestConsents:
 
 # ── Sessions Tests ─────────────────────────────────────────────────────────────
 
+
 class TestSessions:
     def test_list_and_revoke_sessions(self):
         reg = _register_citizen()
@@ -103,21 +110,28 @@ class TestSessions:
 
 # ── Admin & Approval Tests ─────────────────────────────────────────────────────
 
+
 class TestAdmin:
     def test_admin_persona_decide_flow(self):
         reg = _register_citizen()
         token = _login(reg["email"])["access_token"]
 
         # Citizen applies for FARMER persona (restricted -> goes to PENDING)
-        apply_res = client.post("/api/v1/personas", json={
-            "persona_type": "FARMER",
-            "display_name": "Organic Farmer",
-        }, headers=_auth_headers(token))
+        apply_res = client.post(
+            "/api/v1/personas",
+            json={
+                "persona_type": "FARMER",
+                "display_name": "Organic Farmer",
+            },
+            headers=_auth_headers(token),
+        )
         assert apply_res.status_code == 201, apply_res.text
         persona_id = apply_res.json()["persona_id"]
 
         # Admin lists pending persona applications
-        admin_res = client.get("/api/v1/admin/persona-applications", headers=INTERNAL_HEADER)
+        admin_res = client.get(
+            "/api/v1/admin/persona-applications", headers=INTERNAL_HEADER
+        )
         assert admin_res.status_code == 200, admin_res.text
         pending_list = admin_res.json()["data"]
         matching = [item for item in pending_list if item["persona_id"] == persona_id]
@@ -157,7 +171,11 @@ class TestAdmin:
         # Admin reviews KYC record
         review_res = client.post(
             f"/api/v1/admin/kyc/{kyc_record_id}/review",
-            json={"decision": "VERIFIED", "kyc_tier": "T1", "reason_code": "CLEAN_RECORD"},
+            json={
+                "decision": "VERIFIED",
+                "kyc_tier": "T1",
+                "reason_code": "CLEAN_RECORD",
+            },
             headers=INTERNAL_HEADER,
         )
         assert review_res.status_code == 200, review_res.text
@@ -183,6 +201,7 @@ class TestAdmin:
 
 
 # ── Avatar Upload Test ─────────────────────────────────────────────────────────
+
 
 class TestAvatar:
     def test_avatar_upload(self):

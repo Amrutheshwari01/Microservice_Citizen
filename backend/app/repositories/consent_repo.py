@@ -5,13 +5,14 @@ All consent changes are append-aware: withdrawing a consent sets
 `granted=False` and records a `withdrawn_at` timestamp rather than
 deleting the record, preserving the audit trail.
 """
+
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.citizen import Consent

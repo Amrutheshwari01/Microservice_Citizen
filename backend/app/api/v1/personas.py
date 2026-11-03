@@ -6,7 +6,7 @@ from app.db.dependencies import get_db
 from app.api.v1.dependencies import get_current_citizen
 from app.models.citizen import Citizen
 from app.services.citizen_service import PersonaService
-from app.schemas.persona import PersonaApplyRequest, PersonaAdminDecisionRequest
+from app.schemas.persona import PersonaApplyRequest
 
 router = APIRouter(prefix="/personas", tags=["Persona Management"])
 

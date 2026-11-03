@@ -8,6 +8,7 @@ Called by:
 Authentication: X-Service-Key header (pre-shared secret).
 These endpoints are NOT accessible from the browser frontend.
 """
+
 import uuid
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/internal", tags=["Internal — Microservice APIs"])
 
 
 # ── Citizen identity verification ─────────────────────────────────────────────
+
 
 @router.get(
     "/citizens/{citizen_id}/status",
@@ -93,7 +95,9 @@ def get_citizen_personas(
         "active_personas": [
             {
                 "persona_type": p.persona_type,
-                "persona_type_display": DB_TO_UI_MAP.get(p.persona_type, p.persona_type),
+                "persona_type_display": DB_TO_UI_MAP.get(
+                    p.persona_type, p.persona_type
+                ),
                 "is_default": p.is_default,
             }
             for p in active_personas
@@ -127,6 +131,7 @@ def check_citizen_eligibility(
 
     # Normalize alias
     from app.schemas.persona import PERSONA_ALIAS_MAP
+
     mapped_persona = PERSONA_ALIAS_MAP.get(persona.upper(), persona.upper())
 
     match = persona_repo.get_by_citizen_and_type(citizen_id, mapped_persona)
@@ -137,11 +142,14 @@ def check_citizen_eligibility(
         "persona_requested": persona.upper(),
         "persona_normalized": mapped_persona,
         "eligible": eligible,
-        "reason": "Active persona found" if eligible else "Persona not active or not found",
+        "reason": (
+            "Active persona found" if eligible else "Persona not active or not found"
+        ),
     }
 
 
 # ── Internal wallet operations ─────────────────────────────────────────────────
+
 
 @router.post(
     "/wallets/{wallet_id}/hold",
@@ -220,6 +228,7 @@ def internal_debit(
 
 # ── Token introspection ────────────────────────────────────────────────────────
 
+
 @router.post(
     "/tokens/introspect",
     summary="[Internal] Validate a citizen access token",
@@ -260,10 +269,12 @@ def introspect_token(
             "jti": jti,
         }
 
-    import uuid as _uuid
     from datetime import datetime, timezone
+
     exp_ts = payload.get("exp")
-    exp_dt = datetime.fromtimestamp(exp_ts, tz=timezone.utc).isoformat() if exp_ts else None
+    exp_dt = (
+        datetime.fromtimestamp(exp_ts, tz=timezone.utc).isoformat() if exp_ts else None
+    )
 
     return {
         "active": True,

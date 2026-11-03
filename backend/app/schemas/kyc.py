@@ -3,8 +3,8 @@ KYC and document schemas.
 Maps to: kyc_records + kyc_documents tables.
 Files stored in Supabase Storage; only metadata in PostgreSQL.
 """
+
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
@@ -37,8 +37,8 @@ MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
 
 class KycStatusResponse(BaseModel):
     citizen_id: uuid.UUID
-    kyc_tier: str       # T0, T1, T2
-    status: str         # PENDING, IN_REVIEW, VERIFIED, REJECTED, EXPIRED
+    kyc_tier: str  # T0, T1, T2
+    status: str  # PENDING, IN_REVIEW, VERIFIED, REJECTED, EXPIRED
     submitted_at: Optional[str]
     reviewed_at: Optional[str]
     expires_at: Optional[str]

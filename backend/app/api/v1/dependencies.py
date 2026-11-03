@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Tuple
-from fastapi import Depends, Header, Request, status
+from fastapi import Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -65,7 +65,9 @@ def get_current_token_meta(
 
 
 def require_internal_service(
-    x_service_key: str = Header(..., description="Service-to-service preshared secret or service token"),
+    x_service_key: str = Header(
+        ..., description="Service-to-service preshared secret or service token"
+    ),
 ) -> bool:
     """
     Validates requests originating from other microservices

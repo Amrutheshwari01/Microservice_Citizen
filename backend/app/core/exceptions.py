@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from fastapi import HTTPException, status
 
 
@@ -25,7 +25,9 @@ class AppException(HTTPException):
 
 
 class NotFoundException(AppException):
-    def __init__(self, message: str = "Resource not found", details: Optional[Any] = None):
+    def __init__(
+        self, message: str = "Resource not found", details: Optional[Any] = None
+    ):
         super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
             message=message,
@@ -45,7 +47,9 @@ class BadRequestException(AppException):
 
 
 class UnauthorizedException(AppException):
-    def __init__(self, message: str = "Authentication required", details: Optional[Any] = None):
+    def __init__(
+        self, message: str = "Authentication required", details: Optional[Any] = None
+    ):
         super().__init__(
             status_code=status.HTTP_401_UNAUTHORIZED,
             message=message,
@@ -55,7 +59,9 @@ class UnauthorizedException(AppException):
 
 
 class ForbiddenException(AppException):
-    def __init__(self, message: str = "Access forbidden", details: Optional[Any] = None):
+    def __init__(
+        self, message: str = "Access forbidden", details: Optional[Any] = None
+    ):
         super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
             message=message,
@@ -65,7 +71,9 @@ class ForbiddenException(AppException):
 
 
 class ConflictException(AppException):
-    def __init__(self, message: str = "Resource conflict", details: Optional[Any] = None):
+    def __init__(
+        self, message: str = "Resource conflict", details: Optional[Any] = None
+    ):
         super().__init__(
             status_code=status.HTTP_409_CONFLICT,
             message=message,
@@ -75,7 +83,11 @@ class ConflictException(AppException):
 
 
 class InsufficientFundsException(AppException):
-    def __init__(self, message: str = "Insufficient available wallet balance", details: Optional[Any] = None):
+    def __init__(
+        self,
+        message: str = "Insufficient available wallet balance",
+        details: Optional[Any] = None,
+    ):
         super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
             message=message,
@@ -85,7 +97,11 @@ class InsufficientFundsException(AppException):
 
 
 class IdempotencyConflictException(AppException):
-    def __init__(self, message: str = "Request with this idempotency key already processed or in progress", details: Optional[Any] = None):
+    def __init__(
+        self,
+        message: str = "Request with this idempotency key already processed or in progress",
+        details: Optional[Any] = None,
+    ):
         super().__init__(
             status_code=status.HTTP_409_CONFLICT,
             message=message,

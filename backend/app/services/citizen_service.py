@@ -3,7 +3,7 @@ import uuid
 import logging
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,6 @@ from app.core.exceptions import (
     BadRequestException,
     NotFoundException,
     ConflictException,
-    ForbiddenException,
 )
 from app.repositories.citizen_repo import CitizenRepository
 from app.repositories.profile_repo import CitizenProfileRepository
@@ -44,6 +43,7 @@ logger = logging.getLogger("cis.citizen_service")
 
 # ── Profile Service ────────────────────────────────────────────────────────────
 
+
 class CitizenService:
     def __init__(self, db: Session):
         self.db = db
@@ -57,10 +57,6 @@ class CitizenService:
         kyc = self.kyc_repo.get_latest_for_citizen(citizen.id)
         active_personas = self.profile_repo.get_active_personas(citizen.id)
         wallet = self.profile_repo.get_wallet(citizen.id)
-
-        held = Decimal("0")
-        if wallet:
-            held = self.profile_repo.get_held_balance(wallet.id)
 
         return {
             "citizen_id": citizen.id,
@@ -148,6 +144,7 @@ class CitizenService:
 
 # ── Persona Service ────────────────────────────────────────────────────────────
 
+
 class PersonaService:
     def __init__(self, db: Session):
         self.db = db
@@ -158,17 +155,23 @@ class PersonaService:
         result = []
         for p in personas:
             latest_approval = self.repo.get_latest_approval(p.id)
-            result.append({
-                "id": str(p.id),
-                "persona_type": p.persona_type,
-                "persona_type_display": DB_TO_UI_MAP.get(p.persona_type, p.persona_type),
-                "status": p.status,
-                "is_default": p.is_default,
-                "display_name": p.display_name,
-                "created_at": p.created_at.isoformat(),
-                "updated_at": p.updated_at.isoformat(),
-                "latest_decision": latest_approval.decision if latest_approval else None,
-            })
+            result.append(
+                {
+                    "id": str(p.id),
+                    "persona_type": p.persona_type,
+                    "persona_type_display": DB_TO_UI_MAP.get(
+                        p.persona_type, p.persona_type
+                    ),
+                    "status": p.status,
+                    "is_default": p.is_default,
+                    "display_name": p.display_name,
+                    "created_at": p.created_at.isoformat(),
+                    "updated_at": p.updated_at.isoformat(),
+                    "latest_decision": (
+                        latest_approval.decision if latest_approval else None
+                    ),
+                }
+            )
         return result
 
     def apply_persona(self, citizen: Citizen, req: PersonaApplyRequest) -> Dict:
@@ -192,7 +195,7 @@ class PersonaService:
         )
 
         # Create approval record
-        approval = self.repo.create_approval(
+        self.repo.create_approval(
             persona_id=persona.id,
             decision="PENDING" if is_restricted else "APPROVED",
         )
@@ -210,7 +213,9 @@ class PersonaService:
             "message": message,
             "persona_id": str(persona.id),
             "persona_type": persona.persona_type,
-            "persona_type_display": DB_TO_UI_MAP.get(persona.persona_type, persona.persona_type),
+            "persona_type_display": DB_TO_UI_MAP.get(
+                persona.persona_type, persona.persona_type
+            ),
             "status": persona.status,
             "approval_required": is_restricted,
         }
@@ -218,7 +223,9 @@ class PersonaService:
     def activate_persona(self, citizen: Citizen, persona_id: uuid.UUID) -> Dict:
         persona = self.repo.get_by_id(persona_id)
         if not persona or persona.citizen_id != citizen.id:
-            raise NotFoundException("Persona not found or does not belong to this citizen")
+            raise NotFoundException(
+                "Persona not found or does not belong to this citizen"
+            )
         if persona.status != "ACTIVE":
             raise BadRequestException(
                 f"Cannot activate persona with status: {persona.status}. Persona must be ACTIVE."
@@ -266,11 +273,14 @@ class PersonaService:
             "persona_id": str(persona_id),
             "decision": decision,
             "reason_code": reason_code,
-            "reviewed_at": approval.reviewed_at.isoformat() if approval.reviewed_at else None,
+            "reviewed_at": (
+                approval.reviewed_at.isoformat() if approval.reviewed_at else None
+            ),
         }
 
 
 # ── KYC Service ───────────────────────────────────────────────────────────────
+
 
 class KycService:
     def __init__(self, db: Session):
@@ -296,7 +306,9 @@ class KycService:
             "kyc_tier": record.kyc_tier,
             "status": record.status,
             "submitted_at": record.submitted_at.isoformat(),
-            "reviewed_at": record.reviewed_at.isoformat() if record.reviewed_at else None,
+            "reviewed_at": (
+                record.reviewed_at.isoformat() if record.reviewed_at else None
+            ),
             "expires_at": record.expires_at.isoformat() if record.expires_at else None,
             "review_reason_code": record.review_reason_code,
             "documents_count": len(docs),
@@ -362,6 +374,7 @@ class KycService:
 
 # ── Wallet Service ─────────────────────────────────────────────────────────────
 
+
 class WalletService:
     def __init__(self, db: Session):
         self.db = db
@@ -407,9 +420,11 @@ class WalletService:
                 "status": tx.status,
                 "description": tx.description,
                 "reference_type": tx.reference_type,
-                "counterparty_wallet_id": str(tx.counterparty_wallet_id)
-                if tx.counterparty_wallet_id
-                else None,
+                "counterparty_wallet_id": (
+                    str(tx.counterparty_wallet_id)
+                    if tx.counterparty_wallet_id
+                    else None
+                ),
                 "created_at": tx.created_at.isoformat(),
                 "posted_at": tx.posted_at.isoformat() if tx.posted_at else None,
                 "failure_code": tx.failure_code,
@@ -418,15 +433,19 @@ class WalletService:
         ]
 
     def _idempotency_hash(self, citizen_id: uuid.UUID, req_data: str) -> str:
-        return hashlib.sha256(
-            f"{citizen_id}:{req_data}".encode("utf-8")
-        ).hexdigest()
+        return hashlib.sha256(f"{citizen_id}:{req_data}".encode("utf-8")).hexdigest()
 
     def transfer(self, citizen: Citizen, req: TransferRequest) -> Dict:
         # Idempotency check
-        req_hash = self._idempotency_hash(citizen.id, f"{req.recipient_identifier}:{req.amount}:{req.idempotency_key}")
-        self.repo.check_idempotency(citizen.id, req.idempotency_key, "TRANSFER", req_hash)
-        idmp = self.repo.create_idempotency(citizen.id, req.idempotency_key, req_hash, "TRANSFER")
+        req_hash = self._idempotency_hash(
+            citizen.id, f"{req.recipient_identifier}:{req.amount}:{req.idempotency_key}"
+        )
+        self.repo.check_idempotency(
+            citizen.id, req.idempotency_key, "TRANSFER", req_hash
+        )
+        idmp = self.repo.create_idempotency(
+            citizen.id, req.idempotency_key, req_hash, "TRANSFER"
+        )
 
         # Resolve recipient
         recipient = self.citizen_repo.get_by_identifier(req.recipient_identifier)
@@ -468,9 +487,13 @@ class WalletService:
         }
 
     def topup(self, citizen: Citizen, req: TopupRequest) -> Dict:
-        req_hash = self._idempotency_hash(citizen.id, f"{req.amount}:{req.idempotency_key}")
+        req_hash = self._idempotency_hash(
+            citizen.id, f"{req.amount}:{req.idempotency_key}"
+        )
         self.repo.check_idempotency(citizen.id, req.idempotency_key, "TOPUP", req_hash)
-        idmp = self.repo.create_idempotency(citizen.id, req.idempotency_key, req_hash, "TOPUP")
+        idmp = self.repo.create_idempotency(
+            citizen.id, req.idempotency_key, req_hash, "TOPUP"
+        )
 
         wallet = self.repo.get_wallet_by_citizen(citizen.id)
         if not wallet:
@@ -499,9 +522,15 @@ class WalletService:
         }
 
     def cashout(self, citizen: Citizen, req: CashoutRequest) -> Dict:
-        req_hash = self._idempotency_hash(citizen.id, f"{req.amount}:{req.idempotency_key}")
-        self.repo.check_idempotency(citizen.id, req.idempotency_key, "CASHOUT", req_hash)
-        idmp = self.repo.create_idempotency(citizen.id, req.idempotency_key, req_hash, "CASHOUT")
+        req_hash = self._idempotency_hash(
+            citizen.id, f"{req.amount}:{req.idempotency_key}"
+        )
+        self.repo.check_idempotency(
+            citizen.id, req.idempotency_key, "CASHOUT", req_hash
+        )
+        idmp = self.repo.create_idempotency(
+            citizen.id, req.idempotency_key, req_hash, "CASHOUT"
+        )
 
         wallet = self.repo.get_wallet_by_citizen(citizen.id)
         if not wallet:
@@ -557,7 +586,9 @@ class WalletService:
         if not hold or hold.wallet_id != wallet.id:
             raise NotFoundException("Hold not found or does not belong to this wallet")
 
-        _, released_hold = self.repo.release_hold(hold_id=hold_id, refund_to_wallet=True)
+        _, released_hold = self.repo.release_hold(
+            hold_id=hold_id, refund_to_wallet=True
+        )
         self.db.commit()
 
         return {
@@ -579,9 +610,15 @@ class WalletService:
         if not wallet:
             raise NotFoundException("Wallet not found")
 
-        req_hash = self._idempotency_hash(wallet.citizen_id, f"HOLD:{req.amount}:{req.idempotency_key}")
-        self.repo.check_idempotency(wallet.citizen_id, req.idempotency_key, "INTERNAL_HOLD", req_hash)
-        idmp = self.repo.create_idempotency(wallet.citizen_id, req.idempotency_key, req_hash, "INTERNAL_HOLD")
+        req_hash = self._idempotency_hash(
+            wallet.citizen_id, f"HOLD:{req.amount}:{req.idempotency_key}"
+        )
+        self.repo.check_idempotency(
+            wallet.citizen_id, req.idempotency_key, "INTERNAL_HOLD", req_hash
+        )
+        idmp = self.repo.create_idempotency(
+            wallet.citizen_id, req.idempotency_key, req_hash, "INTERNAL_HOLD"
+        )
 
         amount = Decimal(str(req.amount))
         tx, hold = self.repo.create_hold(
@@ -607,7 +644,9 @@ class WalletService:
         if not hold or hold.wallet_id != wallet_id:
             raise NotFoundException("Hold not found for this wallet")
 
-        _, released_hold = self.repo.release_hold(hold_id=hold_id, refund_to_wallet=True)
+        _, released_hold = self.repo.release_hold(
+            hold_id=hold_id, refund_to_wallet=True
+        )
         self.db.commit()
 
         return {
@@ -626,9 +665,15 @@ class WalletService:
         if not wallet:
             raise NotFoundException("Wallet not found")
 
-        req_hash = self._idempotency_hash(wallet.citizen_id, f"CREDIT:{req.amount}:{req.idempotency_key}")
-        self.repo.check_idempotency(wallet.citizen_id, req.idempotency_key, "INTERNAL_CREDIT", req_hash)
-        idmp = self.repo.create_idempotency(wallet.citizen_id, req.idempotency_key, req_hash, "INTERNAL_CREDIT")
+        req_hash = self._idempotency_hash(
+            wallet.citizen_id, f"CREDIT:{req.amount}:{req.idempotency_key}"
+        )
+        self.repo.check_idempotency(
+            wallet.citizen_id, req.idempotency_key, "INTERNAL_CREDIT", req_hash
+        )
+        idmp = self.repo.create_idempotency(
+            wallet.citizen_id, req.idempotency_key, req_hash, "INTERNAL_CREDIT"
+        )
 
         amount = Decimal(str(req.amount))
         tx = self.repo.credit_wallet(
@@ -658,9 +703,15 @@ class WalletService:
         if not wallet:
             raise NotFoundException("Wallet not found")
 
-        req_hash = self._idempotency_hash(wallet.citizen_id, f"DEBIT:{req.amount}:{req.idempotency_key}")
-        self.repo.check_idempotency(wallet.citizen_id, req.idempotency_key, "INTERNAL_DEBIT", req_hash)
-        idmp = self.repo.create_idempotency(wallet.citizen_id, req.idempotency_key, req_hash, "INTERNAL_DEBIT")
+        req_hash = self._idempotency_hash(
+            wallet.citizen_id, f"DEBIT:{req.amount}:{req.idempotency_key}"
+        )
+        self.repo.check_idempotency(
+            wallet.citizen_id, req.idempotency_key, "INTERNAL_DEBIT", req_hash
+        )
+        idmp = self.repo.create_idempotency(
+            wallet.citizen_id, req.idempotency_key, req_hash, "INTERNAL_DEBIT"
+        )
 
         amount = Decimal(str(req.amount))
         tx = self.repo.debit_wallet(

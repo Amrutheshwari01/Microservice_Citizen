@@ -1,5 +1,4 @@
 import uuid
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -28,25 +27,30 @@ def test_auth_full_lifecycle():
     assert reg_data["success"] is True
     assert reg_data["email"] == email
     assert reg_data["mobile"] == mobile
-    citizen_id = reg_data["citizen_id"]
-
     # 2. Duplicate registration fails with 409 Conflict
     dup_res = client.post("/api/v1/auth/register", json=reg_payload)
     assert dup_res.status_code == 409
 
     # 3. Request OTP
-    otp_req = client.post("/api/v1/auth/otp/request", json={"destination": mobile, "purpose": "LOGIN"})
+    otp_req = client.post(
+        "/api/v1/auth/otp/request", json={"destination": mobile, "purpose": "LOGIN"}
+    )
     assert otp_req.status_code == 200
     otp_data = otp_req.json()
     dev_otp = otp_data["dev_otp"]
 
     # 4. Verify OTP
-    otp_ver = client.post("/api/v1/auth/otp/verify", json={"destination": mobile, "code": dev_otp, "purpose": "LOGIN"})
+    otp_ver = client.post(
+        "/api/v1/auth/otp/verify",
+        json={"destination": mobile, "code": dev_otp, "purpose": "LOGIN"},
+    )
     assert otp_ver.status_code == 200
     assert otp_ver.json()["success"] is True
 
     # 5. Login with correct credentials
-    login_res = client.post("/api/v1/auth/login", json={"identifier": email, "password": password})
+    login_res = client.post(
+        "/api/v1/auth/login", json={"identifier": email, "password": password}
+    )
     assert login_res.status_code == 200
     login_data = login_res.json()
     assert login_data["success"] is True
@@ -58,11 +62,15 @@ def test_auth_full_lifecycle():
     refresh_token = login_data["refresh_token"]
 
     # 6. Login with incorrect password fails with 401
-    bad_login = client.post("/api/v1/auth/login", json={"identifier": email, "password": "WrongPassword"})
+    bad_login = client.post(
+        "/api/v1/auth/login", json={"identifier": email, "password": "WrongPassword"}
+    )
     assert bad_login.status_code == 401
 
     # 7. Refresh token
-    refresh_res = client.post("/api/v1/auth/refresh", json={"refresh_token": refresh_token})
+    refresh_res = client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
+    )
     assert refresh_res.status_code == 200
     assert "access_token" in refresh_res.json()
 

@@ -151,7 +151,9 @@ class AuthService:
             self.db.refresh(citizen)
             self.db.refresh(wallet)
 
-            logger.info(f"Citizen registered successfully: ID={citizen.id}, wallet={wallet.id}")
+            logger.info(
+                f"Citizen registered successfully: ID={citizen.id}, wallet={wallet.id}"
+            )
 
             return CitizenRegisterResponse(
                 success=True,
@@ -206,12 +208,16 @@ class AuthService:
         salt = destination.strip().lower()
         challenge = self.repo.get_active_otp(salt, purpose)
         if not challenge:
-            raise BadRequestException("Invalid, expired, or already used OTP. Please request a new code.")
+            raise BadRequestException(
+                "Invalid, expired, or already used OTP. Please request a new code."
+            )
 
         if not verify_otp(code, challenge.code_hash, salt):
             self.repo.increment_otp_attempt(challenge.id)
             self.db.commit()
-            raise BadRequestException("Incorrect OTP. Please check the code and try again.")
+            raise BadRequestException(
+                "Incorrect OTP. Please check the code and try again."
+            )
 
         self.repo.consume_otp(challenge.id)
         self.db.commit()
@@ -229,10 +235,14 @@ class AuthService:
         """
         citizen = self.repo.get_by_identifier(req.identifier)
         if not citizen:
-            raise UnauthorizedException("Invalid credentials. Please verify your mobile/email and password.")
+            raise UnauthorizedException(
+                "Invalid credentials. Please verify your mobile/email and password."
+            )
 
         if citizen.status != "ACTIVE":
-            raise ForbiddenException(f"Account is {citizen.status.lower()}. Please contact support.")
+            raise ForbiddenException(
+                f"Account is {citizen.status.lower()}. Please contact support."
+            )
 
         cred = self.repo.get_credentials(citizen.id)
         if not cred:
@@ -240,7 +250,9 @@ class AuthService:
 
         # Check account lockout
         if cred.locked_until and cred.locked_until > datetime.utcnow():
-            remaining_mins = int((cred.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            remaining_mins = (
+                int((cred.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            )
             raise ForbiddenException(
                 f"Account temporarily locked due to multiple failed login attempts. Try again in {remaining_mins} minutes."
             )
@@ -274,7 +286,9 @@ class AuthService:
             "status": citizen.status,
             "persona": active_persona,
         }
-        access_token, access_jti, access_exp = create_access_token(str(citizen.id), claims=claims)
+        access_token, access_jti, access_exp = create_access_token(
+            str(citizen.id), claims=claims
+        )
         refresh_token, refresh_jti, refresh_exp = create_refresh_token(str(citizen.id))
 
         # Store session
@@ -322,7 +336,9 @@ class AuthService:
         refresh_hash = hash_otp(refresh_token, str(citizen.id))
         session = self.repo.get_active_session_by_hash(citizen.id, refresh_hash)
         if not session:
-            raise UnauthorizedException("Session has been revoked or expired. Please log in again.")
+            raise UnauthorizedException(
+                "Session has been revoked or expired. Please log in again."
+            )
 
         # Determine active persona
         active_persona = "CUSTOMER"
@@ -346,7 +362,13 @@ class AuthService:
             "expires_in": expires_in,
         }
 
-    def logout(self, citizen_id: uuid.UUID, token_jti: str, token_exp: datetime, refresh_token: Optional[str] = None) -> None:
+    def logout(
+        self,
+        citizen_id: uuid.UUID,
+        token_jti: str,
+        token_exp: datetime,
+        refresh_token: Optional[str] = None,
+    ) -> None:
         """Revokes the current access token and session."""
         self.repo.add_token_revocation(
             citizen_id=citizen_id,
