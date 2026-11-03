@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import io
 import logging
-import mimetypes
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
@@ -126,6 +123,7 @@ def upload_avatar(
     if settings.SUPABASE_URL and settings.SUPABASE_KEY:
         try:
             from supabase import create_client  # type: ignore[import]
+
             sb = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
             bucket = settings.SUPABASE_STORAGE_BUCKET_AVATARS
 
@@ -150,7 +148,8 @@ def upload_avatar(
     else:
         logger.warning(
             "SUPABASE_URL/KEY not configured — avatar stored as metadata-only "
-            "(storage_key=%s)", storage_key
+            "(storage_key=%s)",
+            storage_key,
         )
 
     # ── Persist storage key to DB ─────────────────────────────────────────────
@@ -172,4 +171,3 @@ def upload_avatar(
             "size_bytes": len(content),
         },
     }
-

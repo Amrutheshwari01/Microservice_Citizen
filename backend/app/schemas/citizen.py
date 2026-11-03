@@ -2,11 +2,12 @@
 Citizen profile and address schemas.
 Maps to: citizens + citizen_profiles + profile_change_history tables.
 """
+
 import uuid
 from datetime import date
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class ProfileUpdateRequest(BaseModel):

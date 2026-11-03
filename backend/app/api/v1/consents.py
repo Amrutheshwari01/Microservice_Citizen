@@ -8,6 +8,7 @@ Routes:
   GET  /consents        – list all consents for the authenticated citizen
   PATCH /consents/{id}  – grant or withdraw a specific consent
 """
+
 from __future__ import annotations
 
 import uuid
@@ -20,7 +21,11 @@ from app.api.v1.dependencies import get_current_citizen
 from app.db.dependencies import get_db
 from app.models.citizen import Citizen
 from app.repositories.consent_repo import ConsentRepository
-from app.schemas.consent import ConsentListResponse, ConsentResponse, ConsentUpdateRequest
+from app.schemas.consent import (
+    ConsentListResponse,
+    ConsentResponse,
+    ConsentUpdateRequest,
+)
 
 logger = logging.getLogger("cis.consents")
 

@@ -3,13 +3,14 @@
 Protected by service credentials / internal administrative access (X-Service-Key).
 Supports persona approval review, KYC review, wallet limits, and audit logs.
 """
+
 from __future__ import annotations
 
 import uuid
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.v1.dependencies import require_internal_service
@@ -31,7 +32,11 @@ from app.services.citizen_service import PersonaService
 
 logger = logging.getLogger("cis.admin")
 
-router = APIRouter(prefix="/admin", tags=["Admin Operations"], dependencies=[Depends(require_internal_service)])
+router = APIRouter(
+    prefix="/admin",
+    tags=["Admin Operations"],
+    dependencies=[Depends(require_internal_service)],
+)
 
 
 @router.get(
@@ -55,7 +60,9 @@ def list_pending_persona_applications(
                 citizen_email=citizen.email_normalized,
                 citizen_mobile=citizen.mobile_e164,
                 persona_type=persona.persona_type,
-                persona_type_display=DB_TO_UI_MAP.get(persona.persona_type, persona.persona_type),
+                persona_type_display=DB_TO_UI_MAP.get(
+                    persona.persona_type, persona.persona_type
+                ),
                 status=persona.status,
                 applied_at=approval.created_at,
             )
@@ -70,7 +77,9 @@ def list_pending_persona_applications(
 def decide_persona_application(
     persona_id: uuid.UUID,
     req: PersonaAdminDecisionRequest,
-    reviewer_id: Optional[uuid.UUID] = Query(None, description="Optional admin citizen ID"),
+    reviewer_id: Optional[uuid.UUID] = Query(
+        None, description="Optional admin citizen ID"
+    ),
     db: Session = Depends(get_db),
 ):
     service = PersonaService(db)
@@ -91,7 +100,9 @@ def decide_persona_application(
 def review_kyc_record(
     record_id: uuid.UUID,
     req: KycAdminReviewRequest,
-    reviewer_id: Optional[uuid.UUID] = Query(None, description="Optional admin citizen ID"),
+    reviewer_id: Optional[uuid.UUID] = Query(
+        None, description="Optional admin citizen ID"
+    ),
     db: Session = Depends(get_db),
 ):
     repo = KycRepository(db)
@@ -105,7 +116,12 @@ def review_kyc_record(
     if not record:
         raise NotFoundException("KYC record not found")
     db.commit()
-    logger.info("Admin reviewed KYC record %s -> %s (tier: %s)", record_id, req.decision, record.kyc_tier)
+    logger.info(
+        "Admin reviewed KYC record %s -> %s (tier: %s)",
+        record_id,
+        req.decision,
+        record.kyc_tier,
+    )
     return {
         "success": True,
         "message": f"KYC record {record_id} marked as {req.decision}",

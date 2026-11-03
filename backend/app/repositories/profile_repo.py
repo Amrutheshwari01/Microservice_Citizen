@@ -1,17 +1,14 @@
 import uuid
-import json
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import select, update, and_, func
+from sqlalchemy import select, and_, func
 from sqlalchemy.orm import Session
 
-from app.models.citizen import (
-    Citizen, CitizenProfile, ProfileChangeHistory, AuditLog
-)
-from app.models.kyc import KycRecord, KycDocument
-from app.models.persona import Persona, PersonaApproval
+from app.models.citizen import CitizenProfile, ProfileChangeHistory
+from app.models.kyc import KycRecord
+from app.models.persona import Persona
 from app.models.wallet import Wallet, WalletHold
 
 
@@ -90,7 +87,9 @@ class CitizenProfileRepository:
         )
         return list(self.db.scalars(stmt).all())
 
-    def get_wallet(self, citizen_id: uuid.UUID, currency: str = "INR") -> Optional[Wallet]:
+    def get_wallet(
+        self, citizen_id: uuid.UUID, currency: str = "INR"
+    ) -> Optional[Wallet]:
         stmt = select(Wallet).where(
             and_(
                 Wallet.citizen_id == citizen_id,

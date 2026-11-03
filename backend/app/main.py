@@ -78,11 +78,13 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     formatted_errors = []
     for err in exc.errors():
         field = ".".join(str(loc) for loc in err.get("loc", []))
-        formatted_errors.append({
-            "field": field,
-            "message": err.get("msg"),
-            "type": err.get("type"),
-        })
+        formatted_errors.append(
+            {
+                "field": field,
+                "message": err.get("msg"),
+                "type": err.get("type"),
+            }
+        )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -98,7 +100,10 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(SQLAlchemyError)
 async def db_exception_handler(request: Request, exc: SQLAlchemyError):
     request_id = getattr(request.state, "request_id", None)
-    logger.error(f"Database error on {request.method} {request.url.path} [Req: {request_id}]: {exc}", exc_info=True)
+    logger.error(
+        f"Database error on {request.method} {request.url.path} [Req: {request_id}]: {exc}",
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
@@ -113,7 +118,10 @@ async def db_exception_handler(request: Request, exc: SQLAlchemyError):
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     request_id = getattr(request.state, "request_id", None)
-    logger.critical(f"Unhandled error on {request.method} {request.url.path} [Req: {request_id}]: {exc}", exc_info=True)
+    logger.critical(
+        f"Unhandled error on {request.method} {request.url.path} [Req: {request_id}]: {exc}",
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={

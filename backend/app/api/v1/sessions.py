@@ -8,6 +8,7 @@ Routes:
   DELETE /sessions/{id}            – revoke a specific session
   POST   /sessions/revoke-others   – revoke all sessions except the current one
 """
+
 from __future__ import annotations
 
 import uuid
@@ -22,7 +23,11 @@ from app.core.security import decode_token
 from app.db.dependencies import get_db
 from app.models.citizen import Citizen
 from app.repositories.session_repo import SessionRepository
-from app.schemas.session import SessionListResponse, SessionResponse, RevokeOthersResponse
+from app.schemas.session import (
+    SessionListResponse,
+    SessionResponse,
+    RevokeOthersResponse,
+)
 
 logger = logging.getLogger("cis.sessions")
 

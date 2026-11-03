@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import select, and_
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.kyc import KycRecord, KycDocument

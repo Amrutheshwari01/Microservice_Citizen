@@ -15,7 +15,11 @@ from app.core.exceptions import BadRequestException, NotFoundException
 from app.db.dependencies import get_db
 from app.models.citizen import Citizen
 from app.repositories.kyc_repo import KycRepository
-from app.schemas.kyc import ALLOWED_CONTENT_TYPES, ALLOWED_DOCUMENT_TYPES, MAX_FILE_SIZE_BYTES
+from app.schemas.kyc import (
+    ALLOWED_CONTENT_TYPES,
+    ALLOWED_DOCUMENT_TYPES,
+    MAX_FILE_SIZE_BYTES,
+)
 from app.services.citizen_service import KycService
 
 logger = logging.getLogger("cis.kyc")
@@ -58,6 +62,7 @@ def _get_supabase_client():
         return None
     try:
         from supabase import create_client  # type: ignore[import]
+
         return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
     except ImportError:
         logger.warning(
@@ -172,7 +177,9 @@ async def upload_kyc_document(
         )
 
     # ── Tokenise document number ──────────────────────────────────────────────
-    doc_number_token = _tokenize_doc_number(document_number) if document_number else None
+    doc_number_token = (
+        _tokenize_doc_number(document_number) if document_number else None
+    )
 
     # ── Persist metadata in DB ────────────────────────────────────────────────
     service = KycService(db)

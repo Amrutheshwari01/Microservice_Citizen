@@ -1,8 +1,7 @@
 import uuid
-import hashlib
 from datetime import datetime, timedelta
-from typing import Optional, List
-from sqlalchemy import select, update, and_, or_
+from typing import Optional
+from sqlalchemy import select, update, and_
 from sqlalchemy.orm import Session
 
 from app.models.citizen import (
@@ -13,9 +12,6 @@ from app.models.citizen import (
     CitizenSession,
     TokenRevocation,
 )
-from app.models.persona import Persona
-from app.models.wallet import Wallet
-from app.models.kyc import KycRecord
 from app.models.biometric import CitizenBiometric
 
 
@@ -90,7 +86,9 @@ class CitizenRepository:
         self.db.flush()
         return profile
 
-    def create_credentials(self, citizen_id: uuid.UUID, password_hash: str) -> Credential:
+    def create_credentials(
+        self, citizen_id: uuid.UUID, password_hash: str
+    ) -> Credential:
         cred = Credential(
             id=uuid.uuid4(),
             citizen_id=citizen_id,
@@ -160,7 +158,9 @@ class CitizenRepository:
         self.db.flush()
         return challenge
 
-    def get_active_otp(self, destination_masked: str, purpose: str) -> Optional[OtpChallenge]:
+    def get_active_otp(
+        self, destination_masked: str, purpose: str
+    ) -> Optional[OtpChallenge]:
         now = datetime.utcnow()
         stmt = (
             select(OtpChallenge)
@@ -218,7 +218,9 @@ class CitizenRepository:
         self.db.flush()
         return sess
 
-    def get_active_session_by_hash(self, citizen_id: uuid.UUID, token_hash: str) -> Optional[CitizenSession]:
+    def get_active_session_by_hash(
+        self, citizen_id: uuid.UUID, token_hash: str
+    ) -> Optional[CitizenSession]:
         now = datetime.utcnow()
         stmt = select(CitizenSession).where(
             and_(

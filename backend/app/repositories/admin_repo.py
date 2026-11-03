@@ -1,10 +1,11 @@
 """Repository for Admin queries: audit logs, limits, persona applications."""
+
 from __future__ import annotations
 
 import uuid
 from typing import List, Optional, Tuple
 from sqlalchemy import select, desc
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.models.citizen import AuditLog, Citizen
 from app.models.persona import Persona, PersonaApproval
@@ -15,7 +16,9 @@ class AdminRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def list_pending_persona_applications(self) -> List[Tuple[PersonaApproval, Persona, Citizen]]:
+    def list_pending_persona_applications(
+        self,
+    ) -> List[Tuple[PersonaApproval, Persona, Citizen]]:
         """Fetch pending persona approvals joined with persona and citizen info."""
         stmt = (
             select(PersonaApproval, Persona, Citizen)
@@ -45,7 +48,7 @@ class AdminRepository:
         return list(self.db.scalars(stmt).all())
 
     def list_wallet_limits(self, kyc_tier: Optional[str] = None) -> List[WalletLimit]:
-        stmt = select(WalletLimit).where(WalletLimit.is_active == True)
+        stmt = select(WalletLimit).where(WalletLimit.is_active)
         if kyc_tier:
             stmt = stmt.where(WalletLimit.kyc_tier == kyc_tier)
         stmt = stmt.order_by(WalletLimit.kyc_tier, WalletLimit.persona_type)

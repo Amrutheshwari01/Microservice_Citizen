@@ -2,13 +2,14 @@
 
 Provides queries and revocation helpers for the `citizen_sessions` table.
 """
+
 from __future__ import annotations
 
 import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.citizen import CitizenSession

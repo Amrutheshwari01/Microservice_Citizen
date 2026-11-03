@@ -2,8 +2,8 @@
 Wallet, transaction, hold, and internal operation schemas.
 All financial amounts are Decimal strings to prevent float representation errors.
 """
+
 import uuid
-from datetime import datetime
 from decimal import Decimal
 from typing import List, Optional
 
@@ -15,11 +15,11 @@ class WalletSummaryResponse(BaseModel):
     citizen_id: uuid.UUID
     currency_code: str
     status: str
-    available_balance: str          # Stringified Decimal
-    held_balance: str               # Computed: SUM(active holds)
-    total_balance: str              # available + held
-    today_spent: str                # Derived from ledger
-    month_spent: str                # Derived from ledger
+    available_balance: str  # Stringified Decimal
+    held_balance: str  # Computed: SUM(active holds)
+    total_balance: str  # available + held
+    today_spent: str  # Derived from ledger
+    month_spent: str  # Derived from ledger
     updated_at: str
 
     model_config = {"from_attributes": True}
@@ -42,10 +42,17 @@ class TransactionResponse(BaseModel):
 
 
 class TransferRequest(BaseModel):
-    recipient_identifier: str = Field(..., description="Citizen UUID, email, or mobile of recipient")
+    recipient_identifier: str = Field(
+        ..., description="Citizen UUID, email, or mobile of recipient"
+    )
     amount: Decimal = Field(..., gt=0, description="Transfer amount (positive Decimal)")
     description: Optional[str] = Field(None, max_length=255)
-    idempotency_key: str = Field(..., min_length=8, max_length=100, description="Unique key to prevent duplicate transfers")
+    idempotency_key: str = Field(
+        ...,
+        min_length=8,
+        max_length=100,
+        description="Unique key to prevent duplicate transfers",
+    )
     purpose_code: Optional[str] = Field(None, max_length=60)
 
     @field_validator("amount")
@@ -60,8 +67,12 @@ class TransferRequest(BaseModel):
 
 class TopupRequest(BaseModel):
     amount: Decimal = Field(..., gt=0, description="Top-up amount")
-    provider_name: str = Field(..., max_length=80, description="UPI | NETBANKING | CARD")
-    provider_reference: Optional[str] = Field(None, max_length=200, description="Payment gateway transaction ref")
+    provider_name: str = Field(
+        ..., max_length=80, description="UPI | NETBANKING | CARD"
+    )
+    provider_reference: Optional[str] = Field(
+        None, max_length=200, description="Payment gateway transaction ref"
+    )
     idempotency_key: str = Field(..., min_length=8, max_length=100)
 
     @field_validator("amount")
@@ -74,7 +85,9 @@ class TopupRequest(BaseModel):
 
 class CashoutRequest(BaseModel):
     amount: Decimal = Field(..., gt=0, description="Cash-out amount")
-    beneficiary_reference: str = Field(..., description="Masked account or UPI identifier")
+    beneficiary_reference: str = Field(
+        ..., description="Masked account or UPI identifier"
+    )
     idempotency_key: str = Field(..., min_length=8, max_length=100)
 
     @field_validator("amount")
@@ -99,6 +112,7 @@ class HoldResponse(BaseModel):
 
 
 # ── Internal microservice schemas ─────────────────────────────────────────────
+
 
 class InternalCitizenStatusResponse(BaseModel):
     citizen_id: uuid.UUID

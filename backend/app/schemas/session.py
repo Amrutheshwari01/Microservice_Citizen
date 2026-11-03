@@ -1,4 +1,5 @@
 """Pydantic schemas for citizen session management."""
+
 from __future__ import annotations
 
 import uuid

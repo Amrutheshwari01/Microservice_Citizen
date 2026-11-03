@@ -3,9 +3,9 @@ Integration tests for Citizen Profile, Personas, Wallet, and Internal APIs.
 These tests run against the live Supabase database.
 Each test creates fresh data with unique identifiers.
 """
+
 import uuid
 import secrets
-import pytest
 from decimal import Decimal
 from fastapi.testclient import TestClient
 from app.main import app
@@ -20,23 +20,29 @@ def _register_citizen(suffix: str = None) -> dict:
     suffix = suffix or uuid.uuid4().hex[:8]
     mobile = f"+9191{secrets.randbelow(90000000) + 10000000:08d}"
     email = f"cis_{suffix}@agrilink.in"
-    res = client.post("/api/v1/auth/register", json={
-        "full_name": f"Test Citizen {suffix}",
-        "email": email,
-        "mobile": mobile,
-        "password": "SecurePass@2026",
-        "confirm_password": "SecurePass@2026",
-    })
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": f"Test Citizen {suffix}",
+            "email": email,
+            "mobile": mobile,
+            "password": "SecurePass@2026",
+            "confirm_password": "SecurePass@2026",
+        },
+    )
     assert res.status_code == 201, res.text
     return res.json()
 
 
 def _login(identifier: str) -> dict:
     """Helper: login and return token response."""
-    res = client.post("/api/v1/auth/login", json={
-        "identifier": identifier,
-        "password": "SecurePass@2026",
-    })
+    res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "identifier": identifier,
+            "password": "SecurePass@2026",
+        },
+    )
     assert res.status_code == 200, res.text
     return res.json()
 
@@ -46,6 +52,7 @@ def _auth_headers(token: str) -> dict:
 
 
 # ── Profile Tests ──────────────────────────────────────────────────────────────
+
 
 class TestProfile:
     def test_get_profile(self):
@@ -73,7 +80,9 @@ class TestProfile:
             "state_region": "Karnataka",
             "postal_code": "560001",
         }
-        res = client.patch("/api/v1/citizens/me", json=update_data, headers=_auth_headers(token))
+        res = client.patch(
+            "/api/v1/citizens/me", json=update_data, headers=_auth_headers(token)
+        )
         assert res.status_code == 200, res.text
         data = res.json()["data"]
         assert data["full_name"] == "Updated Name"
@@ -86,7 +95,9 @@ class TestProfile:
         token = login["access_token"]
 
         # Update profile
-        client.patch("/api/v1/citizens/me", json={"city": "Mysore"}, headers=_auth_headers(token))
+        client.patch(
+            "/api/v1/citizens/me", json={"city": "Mysore"}, headers=_auth_headers(token)
+        )
 
         # Check history
         res = client.get("/api/v1/citizens/me/history", headers=_auth_headers(token))
@@ -101,6 +112,7 @@ class TestProfile:
 
 
 # ── Persona Tests ──────────────────────────────────────────────────────────────
+
 
 class TestPersonas:
     def test_customer_persona_auto_active(self):
@@ -121,7 +133,11 @@ class TestPersonas:
         login = _login(reg["email"])
         token = login["access_token"]
 
-        res = client.post("/api/v1/personas", json={"persona_type": "FARMER"}, headers=_auth_headers(token))
+        res = client.post(
+            "/api/v1/personas",
+            json={"persona_type": "FARMER"},
+            headers=_auth_headers(token),
+        )
         assert res.status_code == 201, res.text
         data = res.json()
         assert data["persona_type"] == "FARMER"
@@ -134,7 +150,11 @@ class TestPersonas:
         token = login["access_token"]
 
         # CUSTOMER already exists, so apply BUYER (which maps to CUSTOMER) should conflict
-        res = client.post("/api/v1/personas", json={"persona_type": "BUYER"}, headers=_auth_headers(token))
+        res = client.post(
+            "/api/v1/personas",
+            json={"persona_type": "BUYER"},
+            headers=_auth_headers(token),
+        )
         assert res.status_code == 409  # CUSTOMER already exists
 
     def test_duplicate_persona_returns_409(self):
@@ -142,12 +162,21 @@ class TestPersonas:
         login = _login(reg["email"])
         token = login["access_token"]
 
-        client.post("/api/v1/personas", json={"persona_type": "FARMER"}, headers=_auth_headers(token))
-        res = client.post("/api/v1/personas", json={"persona_type": "FARMER"}, headers=_auth_headers(token))
+        client.post(
+            "/api/v1/personas",
+            json={"persona_type": "FARMER"},
+            headers=_auth_headers(token),
+        )
+        res = client.post(
+            "/api/v1/personas",
+            json={"persona_type": "FARMER"},
+            headers=_auth_headers(token),
+        )
         assert res.status_code == 409
 
 
 # ── Wallet Tests ───────────────────────────────────────────────────────────────
+
 
 class TestWallet:
     def test_wallet_exists_after_registration(self):
@@ -167,12 +196,16 @@ class TestWallet:
         login = _login(reg["email"])
         token = login["access_token"]
 
-        topup_res = client.post("/api/v1/wallets/topup", json={
-            "amount": "500.00",
-            "provider_name": "UPI",
-            "provider_reference": "UTR1234",
-            "idempotency_key": f"topup-{uuid.uuid4().hex}",
-        }, headers=_auth_headers(token))
+        topup_res = client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "500.00",
+                "provider_name": "UPI",
+                "provider_reference": "UTR1234",
+                "idempotency_key": f"topup-{uuid.uuid4().hex}",
+            },
+            headers=_auth_headers(token),
+        )
         assert topup_res.status_code == 201, topup_res.text
 
         wallet_res = client.get("/api/v1/wallets/me", headers=_auth_headers(token))
@@ -189,28 +222,40 @@ class TestWallet:
         bob_token = _login(bob["email"])["access_token"]
 
         # Top up Alice
-        client.post("/api/v1/wallets/topup", json={
-            "amount": "1000.00",
-            "provider_name": "NETBANKING",
-            "provider_reference": "NB001",
-            "idempotency_key": f"topup-alice-{uuid.uuid4().hex}",
-        }, headers=_auth_headers(alice_token))
+        client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "1000.00",
+                "provider_name": "NETBANKING",
+                "provider_reference": "NB001",
+                "idempotency_key": f"topup-alice-{uuid.uuid4().hex}",
+            },
+            headers=_auth_headers(alice_token),
+        )
 
         # Transfer ₹300 from Alice to Bob
-        transfer_res = client.post("/api/v1/wallets/transfer", json={
-            "recipient_identifier": bob["mobile"],
-            "amount": "300.00",
-            "description": "Test transfer",
-            "idempotency_key": f"tx-{uuid.uuid4().hex}",
-        }, headers=_auth_headers(alice_token))
+        transfer_res = client.post(
+            "/api/v1/wallets/transfer",
+            json={
+                "recipient_identifier": bob["mobile"],
+                "amount": "300.00",
+                "description": "Test transfer",
+                "idempotency_key": f"tx-{uuid.uuid4().hex}",
+            },
+            headers=_auth_headers(alice_token),
+        )
         assert transfer_res.status_code == 201, transfer_res.text
 
         # Verify Alice's balance decreased
-        alice_wallet = client.get("/api/v1/wallets/me", headers=_auth_headers(alice_token)).json()["data"]
+        alice_wallet = client.get(
+            "/api/v1/wallets/me", headers=_auth_headers(alice_token)
+        ).json()["data"]
         assert Decimal(alice_wallet["available_balance"]) == Decimal("700.0000")
 
         # Verify Bob's balance increased
-        bob_wallet = client.get("/api/v1/wallets/me", headers=_auth_headers(bob_token)).json()["data"]
+        bob_wallet = client.get(
+            "/api/v1/wallets/me", headers=_auth_headers(bob_token)
+        ).json()["data"]
         assert Decimal(bob_wallet["available_balance"]) == Decimal("300.0000")
 
     def test_insufficient_funds_returns_400(self):
@@ -220,11 +265,15 @@ class TestWallet:
 
         other = _register_citizen()
 
-        res = client.post("/api/v1/wallets/transfer", json={
-            "recipient_identifier": other["email"],
-            "amount": "9999.00",
-            "idempotency_key": f"fail-{uuid.uuid4().hex}",
-        }, headers=_auth_headers(token))
+        res = client.post(
+            "/api/v1/wallets/transfer",
+            json={
+                "recipient_identifier": other["email"],
+                "amount": "9999.00",
+                "idempotency_key": f"fail-{uuid.uuid4().hex}",
+            },
+            headers=_auth_headers(token),
+        )
         assert res.status_code == 400
         assert "INSUFFICIENT_FUNDS" in res.json()["code"]
 
@@ -234,17 +283,25 @@ class TestWallet:
         token = login["access_token"]
 
         idem_key = f"idem-{uuid.uuid4().hex}"
-        client.post("/api/v1/wallets/topup", json={
-            "amount": "100.00",
-            "provider_name": "UPI",
-            "idempotency_key": idem_key,
-        }, headers=_auth_headers(token))
+        client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "100.00",
+                "provider_name": "UPI",
+                "idempotency_key": idem_key,
+            },
+            headers=_auth_headers(token),
+        )
 
-        res2 = client.post("/api/v1/wallets/topup", json={
-            "amount": "100.00",
-            "provider_name": "UPI",
-            "idempotency_key": idem_key,
-        }, headers=_auth_headers(token))
+        res2 = client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "100.00",
+                "provider_name": "UPI",
+                "idempotency_key": idem_key,
+            },
+            headers=_auth_headers(token),
+        )
         assert res2.status_code == 409
 
     def test_transaction_history(self):
@@ -253,13 +310,19 @@ class TestWallet:
         token = login["access_token"]
 
         # Top up so we have a transaction
-        client.post("/api/v1/wallets/topup", json={
-            "amount": "200.00",
-            "provider_name": "UPI",
-            "idempotency_key": f"hist-{uuid.uuid4().hex}",
-        }, headers=_auth_headers(token))
+        client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "200.00",
+                "provider_name": "UPI",
+                "idempotency_key": f"hist-{uuid.uuid4().hex}",
+            },
+            headers=_auth_headers(token),
+        )
 
-        res = client.get("/api/v1/wallets/me/transactions", headers=_auth_headers(token))
+        res = client.get(
+            "/api/v1/wallets/me/transactions", headers=_auth_headers(token)
+        )
         assert res.status_code == 200
         txs = res.json()["data"]
         assert len(txs) >= 1
@@ -268,12 +331,15 @@ class TestWallet:
 
 # ── Internal API Tests ─────────────────────────────────────────────────────────
 
+
 class TestInternalAPIs:
     def test_citizen_status_endpoint(self):
         reg = _register_citizen()
         citizen_id = reg["citizen_id"]
 
-        res = client.get(f"/api/v1/internal/citizens/{citizen_id}/status", headers=INTERNAL_HEADER)
+        res = client.get(
+            f"/api/v1/internal/citizens/{citizen_id}/status", headers=INTERNAL_HEADER
+        )
         assert res.status_code == 200, res.text
         data = res.json()
         assert data["status"] == "ACTIVE"
@@ -283,7 +349,9 @@ class TestInternalAPIs:
         reg = _register_citizen()
         citizen_id = reg["citizen_id"]
 
-        res = client.get(f"/api/v1/internal/citizens/{citizen_id}/personas", headers=INTERNAL_HEADER)
+        res = client.get(
+            f"/api/v1/internal/citizens/{citizen_id}/personas", headers=INTERNAL_HEADER
+        )
         assert res.status_code == 200
         data = res.json()
         types = [p["persona_type"] for p in data["active_personas"]]
@@ -318,11 +386,15 @@ class TestInternalAPIs:
         citizen_id = reg["citizen_id"]
 
         # Top up wallet first
-        client.post("/api/v1/wallets/topup", json={
-            "amount": "500.00",
-            "provider_name": "UPI",
-            "idempotency_key": f"pre-hold-{uuid.uuid4().hex}",
-        }, headers=_auth_headers(token))
+        client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "500.00",
+                "provider_name": "UPI",
+                "idempotency_key": f"pre-hold-{uuid.uuid4().hex}",
+            },
+            headers=_auth_headers(token),
+        )
 
         # Get wallet_id from status endpoint
         status_res = client.get(
@@ -331,12 +403,16 @@ class TestInternalAPIs:
         wallet_id = status_res.json()["wallet_id"]
 
         # Place hold
-        hold_res = client.post(f"/api/v1/internal/wallets/{wallet_id}/hold", json={
-            "amount": "200.00",
-            "reason_code": "ORDER_PAYMENT",
-            "idempotency_key": f"hold-{uuid.uuid4().hex}",
-            "expires_in_hours": 24,
-        }, headers=INTERNAL_HEADER)
+        hold_res = client.post(
+            f"/api/v1/internal/wallets/{wallet_id}/hold",
+            json={
+                "amount": "200.00",
+                "reason_code": "ORDER_PAYMENT",
+                "idempotency_key": f"hold-{uuid.uuid4().hex}",
+                "expires_in_hours": 24,
+            },
+            headers=INTERNAL_HEADER,
+        )
         assert hold_res.status_code == 201, hold_res.text
         hold_id = hold_res.json()["hold_id"]
 

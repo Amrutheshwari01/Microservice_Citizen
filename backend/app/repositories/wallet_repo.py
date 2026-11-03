@@ -6,12 +6,13 @@ Critical rules:
   - Ledger entries are always created in pairs (DEBIT + CREDIT).
   - Idempotency keys are checked before any mutating operation.
 """
+
 import uuid
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import List, Optional, Tuple
 
-from sqlalchemy import select, update, and_, func, text
+from sqlalchemy import select, update, and_, func
 from sqlalchemy.orm import Session
 
 from app.models.wallet import (
@@ -19,10 +20,7 @@ from app.models.wallet import (
     WalletTransaction,
     LedgerEntry,
     WalletHold,
-    WalletLimit,
     IdempotencyRecord,
-    TopupRequest,
-    CashoutRequest,
 )
 from app.core.exceptions import (
     InsufficientFundsException,
@@ -62,9 +60,7 @@ class WalletRepository:
         return self.db.scalars(stmt).first()
 
     def get_held_balance(self, wallet_id: uuid.UUID) -> Decimal:
-        stmt = select(
-            func.coalesce(func.sum(WalletHold.amount), Decimal("0"))
-        ).where(
+        stmt = select(func.coalesce(func.sum(WalletHold.amount), Decimal("0"))).where(
             and_(
                 WalletHold.wallet_id == wallet_id,
                 WalletHold.status == "ACTIVE",
@@ -74,10 +70,10 @@ class WalletRepository:
         return Decimal(str(result)) if result else Decimal("0")
 
     def get_spent_today(self, wallet_id: uuid.UUID) -> Decimal:
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        stmt = select(
-            func.coalesce(func.sum(LedgerEntry.amount), Decimal("0"))
-        ).where(
+        today_start = datetime.utcnow().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        stmt = select(func.coalesce(func.sum(LedgerEntry.amount), Decimal("0"))).where(
             and_(
                 LedgerEntry.wallet_id == wallet_id,
                 LedgerEntry.entry_type == "DEBIT",
@@ -90,9 +86,7 @@ class WalletRepository:
     def get_spent_this_month(self, wallet_id: uuid.UUID) -> Decimal:
         now = datetime.utcnow()
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        stmt = select(
-            func.coalesce(func.sum(LedgerEntry.amount), Decimal("0"))
-        ).where(
+        stmt = select(func.coalesce(func.sum(LedgerEntry.amount), Decimal("0"))).where(
             and_(
                 LedgerEntry.wallet_id == wallet_id,
                 LedgerEntry.entry_type == "DEBIT",
@@ -181,7 +175,7 @@ class WalletRepository:
             .values(status="COMPLETED", transaction_id=transaction_id)
         )
         self.db.execute(stmt)
-        self.db.flush()    # ── Double-entry ledger operations ────────────────────────────────────────
+        self.db.flush()  # ── Double-entry ledger operations ────────────────────────────────────────
 
     def _create_transaction(
         self,
