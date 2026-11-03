@@ -14,7 +14,8 @@ export const INITIAL_CITIZEN = {
     aadhaar_masked: "XXXX-XXXX-8921",
     pan_masked: "ABCDE****F",
     verified_at: "2026-10-15T10:30:00Z",
-    provider: "UIDAI / NSDL Adapter"
+    voter_id_masked: "KLR••••391",
+    provider: "UIDAI / NSDL / ECI Adapter"
   },
   active_persona: "FARMER",
   personas: ["FARMER", "BUYER"],

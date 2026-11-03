@@ -72,6 +72,13 @@ export default function ProfileKycView({
     vehicle_classes: 'LMV, MCWG'
   });
 
+  const [voterForm, setVoterForm] = useState({
+    epic_number: '',
+    name_on_voter_id: citizen.full_name || '',
+    state: 'Karnataka',
+    assembly_constituency: ''
+  });
+
   const [gstForm, setGstForm] = useState({
     gstin: '',
     legal_business_name: '',
@@ -125,6 +132,13 @@ export default function ProfileKycView({
         return;
       }
       docNumberMasked = `•••• •••• ${aadhaarForm.aadhaar_last4}`;
+    } else if (kycDocType === 'VOTER_ID') {
+      const epicClean = voterForm.epic_number.trim().toUpperCase();
+      if (!/^[A-Z]{3}[0-9]{7}$/.test(epicClean)) {
+        setKycErrorMsg('Invalid Voter ID / EPIC format. Expected 3 letters followed by 7 digits (e.g. ABC1234567).');
+        return;
+      }
+      docNumberMasked = `${epicClean.slice(0, 3)}••••${epicClean.slice(-3)}`;
     } else if (kycDocType === 'PASSPORT') {
       if (!passportForm.passport_number.trim()) {
         setKycErrorMsg('Please enter your Passport number.');
@@ -388,6 +402,35 @@ export default function ProfileKycView({
                   <span className="text-muted">Preferred Language:</span>
                   <span>{citizen.language === 'en' ? 'English' : citizen.language === 'hi' ? 'Hindi' : 'Kannada'}</span>
                 </div>
+
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '2px dashed var(--slate-200)' }}>
+                  <h4 style={{ fontSize: '0.82rem', textTransform: 'uppercase', color: 'var(--slate-500)', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                    Verified Identity Documents
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="text-muted">Aadhaar (UIDAI):</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="font-mono">{citizen.kyc_details?.aadhaar_masked || 'XXXX-XXXX-8921'}</span>
+                        <span className="badge badge-green" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>Verified</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="text-muted">PAN Card (ITD):</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="font-mono">{citizen.kyc_details?.pan_masked || 'ABCDE****F'}</span>
+                        <span className="badge badge-green" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>Verified</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="text-muted">Voter ID (EPIC):</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span className="font-mono">{citizen.kyc_details?.voter_id_masked || 'KLR••••391'}</span>
+                        <span className="badge badge-green" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>Verified</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -425,6 +468,7 @@ export default function ProfileKycView({
                   >
                     <option value="PAN">PAN Card (Income Tax Verification)</option>
                     <option value="AADHAAR">Aadhaar Card (UIDAI Offline e-KYC with Masking)</option>
+                    <option value="VOTER_ID">Voter ID Card (Election Commission of India - EPIC)</option>
                     <option value="PASSPORT">Passport (International Identity)</option>
                     <option value="DRIVING_LICENCE">Driving Licence (Transport Authority)</option>
                     <option value="GST_CERTIFICATE">GST Registration Certificate (Business / FPO)</option>
@@ -497,6 +541,61 @@ export default function ProfileKycView({
                       <label htmlFor="aadhaar_consent" style={{ fontSize: '0.8rem', color: 'var(--slate-700)', cursor: 'pointer' }}>
                         I give consent to verify my identity via approved offline Aadhaar XML verification rail.
                       </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2b. Voter ID (EPIC) Form */}
+                {kycDocType === 'VOTER_ID' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--slate-50)', padding: '16px', borderRadius: '8px' }}>
+                    <div>
+                      <label className="form-label">Voter ID / EPIC Number (10 alphanumeric characters) *</label>
+                      <input 
+                        type="text" 
+                        maxLength={10}
+                        className="form-input font-mono" 
+                        placeholder="e.g. KLR1234567 (3 letters + 7 digits)"
+                        style={{ textTransform: 'uppercase' }}
+                        required
+                        value={voterForm.epic_number}
+                        onChange={(e) => setVoterForm({ ...voterForm, epic_number: e.target.value.toUpperCase() })}
+                      />
+                      <small className="text-muted" style={{ display: 'block', marginTop: '4px' }}>
+                        Standard 10-character Election Photo Identity Card (EPIC) identifier issued by ECI.
+                      </small>
+                    </div>
+                    <div>
+                      <label className="form-label">Full Name as on Voter ID Card *</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        required
+                        value={voterForm.name_on_voter_id}
+                        onChange={(e) => setVoterForm({ ...voterForm, name_on_voter_id: e.target.value })}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label className="form-label">Issuing State *</label>
+                        <input 
+                          type="text" 
+                          className="form-input" 
+                          placeholder="e.g. Karnataka"
+                          required
+                          value={voterForm.state}
+                          onChange={(e) => setVoterForm({ ...voterForm, state: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">Assembly Constituency</label>
+                        <input 
+                          type="text" 
+                          className="form-input" 
+                          placeholder="e.g. Nelamangala (128)"
+                          value={voterForm.assembly_constituency}
+                          onChange={(e) => setVoterForm({ ...voterForm, assembly_constituency: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
