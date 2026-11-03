@@ -49,6 +49,7 @@ export default function HomePage({
   const [otpMobile, setOtpMobile] = useState('9876543210');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
+  const [otpChannel, setOtpChannel] = useState('WHATSAPP');
   const [otpCountdown, setOtpCountdown] = useState(0);
 
   // Status & Feedback
@@ -162,7 +163,7 @@ export default function HomePage({
     setFeedback(null);
     try {
       const formatted = otpMobile.startsWith('+') ? otpMobile : `+91${cleaned.slice(-10)}`;
-      const res = await authService.requestOtp('SMS', formatted, 'LOGIN');
+      const res = await authService.requestOtp(otpChannel, formatted, 'LOGIN');
       setOtpSent(true);
       setOtpCountdown(30);
       const timer = setInterval(() => {
@@ -469,7 +470,43 @@ export default function HomePage({
               {activeAuthTab === 'otp' && (
                 <div className="login-card-form">
                   <div className="form-group">
-                    <label className="form-label">Indian Mobile Number</label>
+                    <div className="label-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label className="form-label" style={{ margin: 0 }}>Indian Mobile Number</label>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setOtpChannel('WHATSAPP')}
+                          style={{
+                            background: otpChannel === 'WHATSAPP' ? '#16a34a' : 'transparent',
+                            color: otpChannel === 'WHATSAPP' ? '#fff' : '#16a34a',
+                            border: '1px solid #16a34a',
+                            borderRadius: '4px',
+                            padding: '1px 8px',
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setOtpChannel('SMS')}
+                          style={{
+                            background: otpChannel === 'SMS' ? '#047857' : 'transparent',
+                            color: otpChannel === 'SMS' ? '#fff' : '#047857',
+                            border: '1px solid #047857',
+                            borderRadius: '4px',
+                            padding: '1px 8px',
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            fontWeight: 600
+                          }}
+                        >
+                          SMS
+                        </button>
+                      </div>
+                    </div>
                     <div className="mobile-input-split">
                       <span className="country-code-pill">🇮🇳 +91</span>
                       <input 

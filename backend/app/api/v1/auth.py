@@ -62,7 +62,11 @@ def request_otp(
     db: Session = Depends(get_db),
 ):
     service = AuthService(db)
-    return service.request_otp(destination=req.destination, purpose=req.purpose)
+    return service.request_otp(
+        destination=req.destination,
+        purpose=req.purpose,
+        channel=getattr(req, "channel", "SMS") or "SMS"
+    )
 
 
 @router.post(

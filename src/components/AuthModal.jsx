@@ -51,6 +51,7 @@ export default function AuthModal({
   const [regMobile, setRegMobile] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regNationality, setRegNationality] = useState('IN');
+  const [regChannel, setRegChannel] = useState('WHATSAPP');
   const [regLanguage, setRegLanguage] = useState('en');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
@@ -116,7 +117,7 @@ export default function AuthModal({
     setMessage(null);
     try {
       const formatted = regMobile.startsWith('+') ? regMobile : `+91${cleanedMobile.slice(-10)}`;
-      const res = await authService.requestOtp('SMS', formatted, 'REGISTER');
+      const res = await authService.requestOtp(regChannel, formatted, 'REGISTER');
       setRegOtpSent(true);
       startOtpTimer();
       const codeMsg = res?.dev_otp ? ` (Test code: ${res.dev_otp})` : ' (Use test code: 7721)';
@@ -667,7 +668,43 @@ export default function AuthModal({
               {/* 2. Mobile & Email (Mandatory) */}
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Mobile Number *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                    <label className="form-label" style={{ margin: 0 }}>Mobile Number *</label>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setRegChannel('WHATSAPP')}
+                        style={{
+                          background: regChannel === 'WHATSAPP' ? '#16a34a' : 'transparent',
+                          color: regChannel === 'WHATSAPP' ? '#fff' : '#16a34a',
+                          border: '1px solid #16a34a',
+                          borderRadius: '4px',
+                          padding: '1px 6px',
+                          fontSize: '0.7rem',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegChannel('SMS')}
+                        style={{
+                          background: regChannel === 'SMS' ? '#047857' : 'transparent',
+                          color: regChannel === 'SMS' ? '#fff' : '#047857',
+                          border: '1px solid #047857',
+                          borderRadius: '4px',
+                          padding: '1px 6px',
+                          fontSize: '0.7rem',
+                          cursor: 'pointer',
+                          fontWeight: 600
+                        }}
+                      >
+                        SMS
+                      </button>
+                    </div>
+                  </div>
                   <div className="input-with-button">
                     <input 
                       type="tel" 
