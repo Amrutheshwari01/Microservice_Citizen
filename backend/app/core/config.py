@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     HUGGINGFACE_MODEL: str = "google/vit-base-patch16-224"
     FACE_MATCH_THRESHOLD: float = 0.78
 
+    # Twilio SMS Gateway (CID-FR-01 OTP Delivery)
+    TWILIO_ACCOUNT_SID: str = ""
+    TWILIO_AUTH_TOKEN: str = ""
+    TWILIO_PHONE_NUMBER: str = ""
+    TWILIO_MESSAGING_SERVICE_SID: str = ""
+
     # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",

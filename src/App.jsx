@@ -144,19 +144,36 @@ export default function App() {
   };
 
   const handleRegisterSuccess = (newCitizenData) => {
-    setCitizen(prev => ({
-      ...prev,
-      ...newCitizenData,
+    const formattedId = newCitizenData.citizen_id || `CIT-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newCitizenObj = {
+      citizen_id: formattedId,
+      full_name: newCitizenData.full_name,
+      email: newCitizenData.email,
+      mobile: newCitizenData.mobile,
+      nationality: newCitizenData.nationality || 'Indian',
+      language: newCitizenData.language || 'en',
+      address: newCitizenData.address || "Address to be added",
       kyc_tier: 'T0',
       kyc_status: 'UNVERIFIED',
-      personas: ['FARMER'],
-      active_persona: 'FARMER'
-    }));
+      kyc_details: {
+        provider: 'Pending Document Verification'
+      },
+      personas: ['CUSTOMER'],
+      active_persona: 'CUSTOMER',
+      pending_persona_applications: [],
+      verified_bank_accounts: [],
+      mfa_threshold_amount: 10000,
+      mfa_method: 'SMS_OTP',
+      wallet_locked: false,
+      pin_failed_attempts: 0,
+      has_face_enrolled: !!newCitizenData.has_face_enrolled
+    };
+    setCitizen(newCitizenObj);
 
     const newWallet = {
-      wallet_id: `WAL-IN-${newCitizenData.citizen_id.slice(-4)}-01`,
+      wallet_id: `WAL-IN-${String(formattedId).slice(-4)}-01`,
       currency: "INR",
-      citizen_id: newCitizenData.citizen_id,
+      citizen_id: formattedId,
       available_balance: 0.00,
       held_balance: 0.00,
       total_balance: 0.00,
@@ -165,7 +182,14 @@ export default function App() {
       last_updated: new Date().toISOString()
     };
     setWallet(newWallet);
+    setTransactions([]);
+    setHolds([]);
+    setAddresses([]);
+    setBankAccounts([]);
     setIsLoggedIn(true);
+    setActiveSurface('CITIZEN');
+    setActiveTab('dashboard');
+    setIsAuthModalOpen(false);
 
     recordEvent(
       "CitizenRegistered",

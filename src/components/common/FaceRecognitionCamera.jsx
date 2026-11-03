@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, CheckCircle2, AlertCircle, Upload, Eye, ShieldCheck, X } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2, AlertCircle, Upload, Eye, ShieldCheck, X, ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function FaceRecognitionCamera({
   onCapture,
@@ -16,6 +16,7 @@ export default function FaceRecognitionCamera({
   const [capturedImage, setCapturedImage] = useState(null);
   const [cameraError, setCameraError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Start webcam
   const startCamera = async () => {
@@ -91,12 +92,16 @@ export default function FaceRecognitionCamera({
   // Retake
   const handleRetake = () => {
     setCapturedImage(null);
+    setIsConfirming(false);
     startCamera();
   };
 
   // Confirm capture
   const handleConfirm = () => {
     if (capturedImage) {
+      setIsConfirming(true);
+      stopCamera();
+      // Invoke callback
       onCapture(capturedImage);
     }
   };
@@ -284,6 +289,7 @@ export default function FaceRecognitionCamera({
               type="button"
               className="btn btn-outline"
               onClick={handleRetake}
+              disabled={isConfirming}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -304,6 +310,7 @@ export default function FaceRecognitionCamera({
               type="button"
               className="btn btn-primary"
               onClick={handleConfirm}
+              disabled={isConfirming}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -319,7 +326,9 @@ export default function FaceRecognitionCamera({
               }}
             >
               <CheckCircle2 size={14} />
-              <span>{mode === 'LOGIN' ? 'Log In' : 'Use Photo'}</span>
+              <span>
+                {isConfirming ? 'Processing...' : (mode === 'LOGIN' ? 'Verify & Log In' : 'Use Photo & Return')}
+              </span>
             </button>
           </div>
         )}
@@ -345,6 +354,31 @@ export default function FaceRecognitionCamera({
             onChange={handleFileUpload}
           />
         </label>
+
+        {onCancel && (
+          <button
+            type="button"
+            onClick={() => {
+              stopCamera();
+              onCancel();
+            }}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#94a3b8',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              padding: '4px'
+            }}
+          >
+            <ArrowLeft size={12} />
+            <span>Return to Form</span>
+          </button>
+        )}
       </div>
 
       <style>{`

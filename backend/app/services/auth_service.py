@@ -29,6 +29,7 @@ from app.models.wallet import Wallet
 from app.models.kyc import KycRecord
 from app.models.citizen import Consent
 from app.services.face_service import face_recognition_service
+from app.services.twilio_service import twilio_service
 from app.schemas.auth import (
     FaceLoginRequest,
     FaceEnrollRequest,
@@ -208,17 +209,18 @@ class AuthService:
         )
         self.db.commit()
 
-        # In production, dispatch via SMS/Email gateway.
-        # For development and testing, log and expose in debug response
+        # Dispatch OTP via Twilio SMS adapter
         logger.info(f"OTP generated for {salt} [{purpose}]: {otp_code}")
+        twilio_res = twilio_service.send_otp(to_phone=destination, otp_code=otp_code, purpose=purpose)
 
         res = {
             "success": True,
-            "message": f"OTP successfully dispatched to {destination}",
+            "message": twilio_res.get("message", f"OTP successfully dispatched to {destination}"),
+            "provider": twilio_res.get("provider", "twilio"),
             "expires_in_minutes": settings.OTP_EXPIRE_MINUTES,
         }
-        if settings.DEBUG or True:  # Included for dev/evaluation phase
-            res["dev_otp"] = otp_code
+        if "dev_otp" in twilio_res:
+            res["dev_otp"] = twilio_res["dev_otp"]
         return res
 
     def verify_otp(self, destination: str, code: str, purpose: str) -> bool:

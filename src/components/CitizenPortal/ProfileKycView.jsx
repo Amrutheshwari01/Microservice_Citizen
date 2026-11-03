@@ -18,6 +18,7 @@ import {
   FileText
 } from 'lucide-react';
 import { KYC_TIERS_INFO } from '../../data/mockData';
+import { INDIAN_PATTERNS } from '../../utils/validators';
 import confetti from 'canvas-confetti';
 
 export default function ProfileKycView({
@@ -116,48 +117,52 @@ export default function ProfileKycView({
 
     let docNumberMasked = 'XXXX-9912';
 
-    if (kycDocType === 'PAN') {
-      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panForm.pan_number.trim().toUpperCase())) {
-        setKycErrorMsg('Invalid PAN format (Expected format: ABCDE1234F).');
+        if (kycDocType === 'PAN') {
+      const panClean = panForm.pan_number.trim().toUpperCase();
+      if (!INDIAN_PATTERNS.PAN.test(panClean)) {
+        setKycErrorMsg('Invalid Indian PAN format. Must be 10 characters: 5 letters, 4 numbers, 1 letter (e.g. ABCDE1234F).');
         return;
       }
-      docNumberMasked = `${panForm.pan_number.slice(0, 2)}•••••${panForm.pan_number.slice(-2)}`.toUpperCase();
+      docNumberMasked = `${panClean.slice(0, 2)}••••••${panClean.slice(-2)}`;
     } else if (kycDocType === 'AADHAAR') {
-      if (!/^\d{4}$/.test(aadhaarForm.aadhaar_last4.trim())) {
-        setKycErrorMsg('Please enter the last 4 digits of your Aadhaar card.');
+      const aadhClean = aadhaarForm.aadhaar_last4.trim();
+      if (!INDIAN_PATTERNS.AADHAAR_LAST4.test(aadhClean)) {
+        setKycErrorMsg('Invalid Aadhaar digits. Enter the last 4 digits of your Aadhaar card.');
         return;
       }
       if (!aadhaarForm.consent_granted) {
-        setKycErrorMsg('You must provide consent for Aadhaar-based KYC verification.');
+        setKycErrorMsg('UIDAI Consent required: You must consent to Aadhaar-based KYC verification.');
         return;
       }
-      docNumberMasked = `•••• •••• ${aadhaarForm.aadhaar_last4}`;
+      docNumberMasked = `•••• •••• ${aadhClean}`;
     } else if (kycDocType === 'VOTER_ID') {
       const epicClean = voterForm.epic_number.trim().toUpperCase();
-      if (!/^[A-Z]{3}[0-9]{7}$/.test(epicClean)) {
-        setKycErrorMsg('Invalid Voter ID / EPIC format. Expected 3 letters followed by 7 digits (e.g. ABC1234567).');
+      if (!INDIAN_PATTERNS.VOTER_ID.test(epicClean)) {
+        setKycErrorMsg('Invalid Voter ID (EPIC) format. Must be 3 letters followed by 7 digits (e.g. KLR1234567).');
         return;
       }
       docNumberMasked = `${epicClean.slice(0, 3)}••••${epicClean.slice(-3)}`;
     } else if (kycDocType === 'PASSPORT') {
-      if (!passportForm.passport_number.trim()) {
-        setKycErrorMsg('Please enter your Passport number.');
+      const passClean = passportForm.passport_number.trim().toUpperCase();
+      if (!INDIAN_PATTERNS.PASSPORT.test(passClean)) {
+        setKycErrorMsg('Invalid Indian Passport format. Must start with 1 letter followed by 7 digits (e.g. A1234567).');
         return;
       }
-      docNumberMasked = `${passportForm.passport_number.slice(0, 1)}••••••${passportForm.passport_number.slice(-1)}`.toUpperCase();
+      docNumberMasked = `${passClean.slice(0, 1)}••••••${passClean.slice(-1)}`;
     } else if (kycDocType === 'DRIVING_LICENCE') {
-      if (!dlForm.licence_number.trim()) {
-        setKycErrorMsg('Please enter your Driving Licence number.');
+      const dlClean = dlForm.licence_number.trim().toUpperCase().replace(/[-\s]/g, '');
+      if (dlClean.length < 15) {
+        setKycErrorMsg('Invalid Driving Licence format. Expected State code, RTO code, year and registration digits (e.g. KA0120200012345).');
         return;
       }
-      docNumberMasked = `DL-••••-${dlForm.licence_number.slice(-4)}`.toUpperCase();
+      docNumberMasked = `DL-${dlClean.slice(0, 4)}••••${dlClean.slice(-4)}`;
     } else if (kycDocType === 'GST_CERTIFICATE') {
-      if (!gstForm.gstin.trim() || gstForm.gstin.length < 15) {
-        setKycErrorMsg('Please enter a valid 15-character GSTIN.');
+      const gstClean = gstForm.gstin.trim().toUpperCase();
+      if (!INDIAN_PATTERNS.GSTIN.test(gstClean)) {
+        setKycErrorMsg('Invalid GSTIN format. Expected 15 characters: 2 state digits, 10 PAN chars, 1 entity, Z, 1 checksum (e.g. 29ABCDE1234F1Z5).');
         return;
       }
-      docNumberMasked = `${gstForm.gstin.slice(0, 2)}•••••••••${gstForm.gstin.slice(-3)}`.toUpperCase();
-    } else if (kycDocType === 'FARMER_CERTIFICATE') {
+      docNumberMasked = `${gstClean.slice(0, 2)}••••••••••${gstClean.slice(-3)}`; } else if (kycDocType === 'FARMER_CERTIFICATE') {
       if (!farmerForm.survey_number.trim()) {
         setKycErrorMsg('Please enter the agricultural Land Survey or Farmer ID number.');
         return;

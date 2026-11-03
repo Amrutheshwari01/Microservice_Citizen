@@ -8,30 +8,45 @@ class CitizenRegisterRequest(BaseModel):
     full_name: str = Field(
         ..., min_length=2, max_length=150, description="Full legal name of the citizen"
     )
-    email: Optional[EmailStr] = Field(None, description="Citizen email address")
-    mobile: Optional[str] = Field(
-        None, description="Mobile number in E.164 format (e.g., +919876543210)"
+    email: EmailStr = Field(..., description="Citizen email address (mandatory)")
+    mobile: str = Field(
+        ..., description="Mobile number in E.164 format (e.g., +919876543210)"
     )
-    password: Optional[str] = Field(
-        None,
+    password: str = Field(
+        ...,
         min_length=8,
         max_length=128,
-        description="Password (optional if registering via OTP)",
+        description="Password (min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char)",
     )
-    confirm_password: Optional[str] = Field(None, description="Password confirmation")
+    confirm_password: str = Field(..., description="Password confirmation (mandatory)")
     preferred_language: str = Field(
         "en", max_length=20, description="Language preference (en, hi, kn)"
     )
     nationality_code: str = Field(
-        "IN", max_length=2, description="2-letter country code"
+        ..., min_length=2, max_length=2, description="2-letter country code (mandatory, e.g. IN)"
     )
     face_image: Optional[str] = Field(
         None, description="Optional Base64 Data URL of face selfie for biometric enrollment"
     )
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter (A-Z)")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter (a-z)")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit (0-9)")
+        if not re.search(r"[@$!%*?&#^_\-]", v):
+            raise ValueError("Password must contain at least one special character (@$!%*?&#^_-)")
+        return v
+
     @field_validator("mobile")
     @classmethod
-    def validate_mobile(cls, v: Optional[str]) -> Optional[str]:
+    def validate_mobile(cls, v: str) -> str:
         if v is None:
             return None
         cleaned = re.sub(r"[\s\-]", "", v)
@@ -45,15 +60,11 @@ class CitizenRegisterRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_inputs(self):
-        if not self.email and not self.mobile:
-            raise ValueError(
-                "Either email or mobile number must be provided for registration"
-            )
-        if (
-            self.password
-            and self.confirm_password
-            and self.password != self.confirm_password
-        ):
+        if not self.email:
+            raise ValueError("Email address is mandatory for citizen registration")
+        if not self.nationality_code or len(self.nationality_code.strip()) != 2:
+            raise ValueError("Nationality code is mandatory (e.g. 'IN')")
+        if self.password != self.confirm_password:
             raise ValueError("Password and confirm_password do not match")
         return self
 
