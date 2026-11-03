@@ -161,7 +161,7 @@ class TestAdmin:
         file_bytes = b"%PDF-1.4 dummy test document content"
         upload_res = client.post(
             "/api/v1/kyc/documents",
-            data={"document_type": "AADHAAR", "document_number": "123456789012"},
+            data={"document_type": "AADHAAR", "document_number": "223456789012"},
             files={"file": ("aadhaar.pdf", file_bytes, "application/pdf")},
             headers=_auth_headers(token),
         )
