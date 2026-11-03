@@ -74,11 +74,13 @@ class CitizenRepository:
         citizen_id: uuid.UUID,
         preferred_language: str = "en",
         nationality_code: str = "IN",
+        profile_photo_ref: Optional[str] = None,
     ) -> CitizenProfile:
         profile = CitizenProfile(
             citizen_id=citizen_id,
             preferred_language=preferred_language,
             nationality_code=nationality_code,
+            profile_photo_ref=profile_photo_ref,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
         )
