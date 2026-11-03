@@ -196,7 +196,9 @@ class AuthService:
             logger.error(f"Failed to register citizen: {exc}", exc_info=True)
             raise
 
-    def request_otp(self, destination: str, purpose: str) -> Dict[str, Any]:
+    def request_otp(
+        self, destination: str, purpose: str, channel: str = "SMS"
+    ) -> Dict[str, Any]:
         """Generates OTP, persists hashed challenge, and prepares delivery."""
         otp_code = generate_otp(6)
         salt = destination.strip().lower()
@@ -218,7 +220,10 @@ class AuthService:
         # Dispatch OTP via Twilio SMS adapter
         logger.info(f"OTP generated for {salt} [{purpose}]: {otp_code}")
         twilio_res = twilio_service.send_otp(
-            to_phone=destination, otp_code=otp_code, purpose=purpose
+            to_phone=destination,
+            otp_code=otp_code,
+            purpose=purpose,
+            channel=channel.lower() if channel else "sms",
         )
 
         res = {
