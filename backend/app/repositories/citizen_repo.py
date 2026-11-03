@@ -16,6 +16,7 @@ from app.models.citizen import (
 from app.models.persona import Persona
 from app.models.wallet import Wallet
 from app.models.kyc import KycRecord
+from app.models.biometric import CitizenBiometric
 
 
 class CitizenRepository:
@@ -274,3 +275,64 @@ class CitizenRepository:
     def is_token_revoked(self, token_jti: str) -> bool:
         stmt = select(TokenRevocation).where(TokenRevocation.token_jti == token_jti)
         return self.db.scalars(stmt).first() is not None
+
+    def save_biometric(
+        self,
+        citizen_id: uuid.UUID,
+        embedding: List[float],
+        photo_url: Optional[str] = None,
+        model_name: str = "facenet512",
+        biometric_type: str = "FACE",
+    ) -> CitizenBiometric:
+        stmt = select(CitizenBiometric).where(
+            and_(
+                CitizenBiometric.citizen_id == citizen_id,
+                CitizenBiometric.biometric_type == biometric_type,
+            )
+        )
+        existing = self.db.scalars(stmt).first()
+        if existing:
+            existing.embedding = embedding
+            existing.photo_url = photo_url
+            existing.model_name = model_name
+            existing.updated_at = datetime.utcnow()
+            self.db.flush()
+            return existing
+
+        bio = CitizenBiometric(
+            id=uuid.uuid4(),
+            citizen_id=citizen_id,
+            biometric_type=biometric_type,
+            embedding=embedding,
+            photo_url=photo_url,
+            model_name=model_name,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        self.db.add(bio)
+        self.db.flush()
+        return bio
+
+    def get_biometric(
+        self, citizen_id: uuid.UUID, biometric_type: str = "FACE"
+    ) -> Optional[CitizenBiometric]:
+        stmt = select(CitizenBiometric).where(
+            and_(
+                CitizenBiometric.citizen_id == citizen_id,
+                CitizenBiometric.biometric_type == biometric_type,
+            )
+        )
+        return self.db.scalars(stmt).first()
+
+    def get_all_face_biometrics(self):
+        stmt = (
+            select(CitizenBiometric, Citizen)
+            .join(Citizen, Citizen.id == CitizenBiometric.citizen_id)
+            .where(
+                and_(
+                    CitizenBiometric.biometric_type == "FACE",
+                    Citizen.status == "ACTIVE",
+                )
+            )
+        )
+        return list(self.db.execute(stmt).all())

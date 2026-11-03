@@ -12,6 +12,7 @@ class CitizenRegisterRequest(BaseModel):
     confirm_password: Optional[str] = Field(None, description="Password confirmation")
     preferred_language: str = Field("en", max_length=20, description="Language preference (en, hi, kn)")
     nationality_code: str = Field("IN", max_length=2, description="2-letter country code")
+    face_image: Optional[str] = Field(None, description="Optional Base64 Data URL of face selfie for biometric enrollment")
 
     @field_validator("mobile")
     @classmethod
@@ -102,3 +103,29 @@ class PasswordResetRequest(BaseModel):
 
 class LogoutRequest(BaseModel):
     refresh_token: Optional[str] = None
+
+
+class FaceLoginRequest(BaseModel):
+    face_image: str = Field(..., description="Base64 Data URL of face selfie captured from camera")
+    identifier: Optional[str] = Field(None, description="Optional email or mobile number to narrow search")
+    device_label: Optional[str] = Field("web", max_length=120, description="Device name / browser")
+
+
+class FaceEnrollRequest(BaseModel):
+    face_image: str = Field(..., description="Base64 Data URL of face selfie to enroll or update")
+
+
+class FaceMatchResponse(BaseModel):
+    success: bool = True
+    message: str
+    match_confidence: float
+    provider: str
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_type: str = "Bearer"
+    expires_in: int = 3600
+    citizen_id: Optional[uuid.UUID] = None
+    full_name: Optional[str] = None
+    active_persona: Optional[str] = None
+    kyc_tier: Optional[str] = None
+

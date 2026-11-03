@@ -30,6 +30,7 @@ from app.models.wallet import (
     CashoutRequest,
     RiskReview,
 )
+from app.models.biometric import CitizenBiometric
 
 __all__ = [
     "Base",
@@ -56,4 +57,5 @@ __all__ = [
     "TopupRequest",
     "CashoutRequest",
     "RiskReview",
+    "CitizenBiometric",
 ]

@@ -12,7 +12,7 @@ DATABASE_URL = settings.DATABASE_URL
 # (prepare_threshold=None is required for Supabase transaction/session poolers)
 connect_args = {
     "prepare_threshold": None,
-    "connect_timeout": 15,
+    "connect_timeout": 30,
 }
 
 engine = create_engine(

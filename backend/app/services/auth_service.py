@@ -28,7 +28,11 @@ from app.models.persona import Persona
 from app.models.wallet import Wallet
 from app.models.kyc import KycRecord
 from app.models.citizen import Consent
+from app.services.face_service import face_recognition_service
 from app.schemas.auth import (
+    FaceLoginRequest,
+    FaceEnrollRequest,
+    FaceMatchResponse,
     CitizenRegisterRequest,
     CitizenRegisterResponse,
     LoginRequest,
@@ -146,6 +150,20 @@ class AuthService:
             )
             self.db.add(terms_consent)
             self.db.add(privacy_consent)
+
+            # 8. Face Biometrics Enrollment if provided
+            if getattr(req, "face_image", None):
+                try:
+                    embedding, provider_name = face_recognition_service.extract_embedding(req.face_image)
+                    self.repo.save_biometric(
+                        citizen_id=citizen.id,
+                        embedding=embedding,
+                        model_name=provider_name,
+                        biometric_type="FACE"
+                    )
+                    logger.info(f"Auto-enrolled face biometrics on registration for citizen {citizen.id}")
+                except Exception as exc:
+                    logger.warning(f"Face enrollment during registration skipped due to error: {exc}")
 
             self.db.commit()
             self.db.refresh(citizen)
@@ -374,3 +392,155 @@ class AuthService:
         self.repo.revoke_all_sessions(citizen.id)
         self.db.commit()
         return True
+
+    def enroll_face(self, citizen_id: uuid.UUID, face_image: str) -> Dict[str, Any]:
+        """
+        Enrolls or updates facial biometrics for an active citizen.
+        Extracts embedding via Hugging Face or resilient local feature extractor.
+        """
+        citizen = self.repo.get_by_id(citizen_id)
+        if not citizen:
+            raise NotFoundException("Citizen not found")
+
+        try:
+            embedding, provider_name = face_recognition_service.extract_embedding(face_image)
+        except Exception as exc:
+            raise BadRequestException(f"Failed to process face image: {exc}")
+
+        bio = self.repo.save_biometric(
+            citizen_id=citizen.id,
+            embedding=embedding,
+            model_name=provider_name,
+            biometric_type="FACE"
+        )
+        self.db.commit()
+
+        logger.info(f"Enrolled face biometrics for citizen {citizen.id} using {provider_name}")
+        return {
+            "success": True,
+            "message": "Face recognition biometrics enrolled successfully.",
+            "provider": provider_name,
+            "enrolled_at": bio.updated_at.isoformat(),
+        }
+
+    def login_with_face(
+        self,
+        face_image: str,
+        identifier: Optional[str] = None,
+        device_label: Optional[str] = "web",
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> FaceMatchResponse:
+        """
+        Biometric Face Recognition Login:
+        1. Extracts embedding from candidate face image via Hugging Face / Local pipeline.
+        2. Matches against enrolled face biometrics (1:1 if identifier provided, 1:N otherwise).
+        3. If similarity >= threshold, generates access/refresh JWT tokens,
+           creates session, and logs audit trail.
+        """
+        try:
+            candidate_emb, provider_name = face_recognition_service.extract_embedding(face_image)
+        except Exception as exc:
+            raise BadRequestException(f"Unable to process facial image: {exc}")
+
+        matched_citizen: Optional[Citizen] = None
+        best_confidence: float = 0.0
+
+        if identifier:
+            # 1:1 Targeted Verification
+            citizen = self.repo.get_by_identifier(identifier)
+            if not citizen:
+                raise UnauthorizedException("No account found matching the provided identifier.")
+            if citizen.status != "ACTIVE":
+                raise ForbiddenException(f"Account is {citizen.status.lower()}.")
+
+            bio = self.repo.get_biometric(citizen.id, "FACE")
+            if not bio or not bio.embedding:
+                raise BadRequestException(
+                    "Face recognition login is not enrolled for this account. Please log in with password or OTP and enroll in settings."
+                )
+
+            is_match, conf = face_recognition_service.verify_match(candidate_emb, bio.embedding)
+            if not is_match:
+                raise UnauthorizedException(
+                    f"Face recognition failed: biometric match confidence ({conf}%) is below the security threshold."
+                )
+            matched_citizen = citizen
+            best_confidence = conf
+        else:
+            # 1:N Biometric Identification across active citizens
+            records = self.repo.get_all_face_biometrics()
+            if not records:
+                raise UnauthorizedException(
+                    "No enrolled face biometrics found. Please enroll your face during registration or via settings."
+                )
+
+            best_match_record = None
+            for bio, citizen in records:
+                if not bio.embedding:
+                    continue
+                is_match, conf = face_recognition_service.verify_match(candidate_emb, bio.embedding)
+                if is_match and conf > best_confidence:
+                    best_confidence = conf
+                    best_match_record = (bio, citizen)
+
+            if not best_match_record:
+                raise UnauthorizedException(
+                    "Face not recognized. Please ensure good lighting and face camera directly, or log in with your credentials."
+                )
+
+            matched_citizen = best_match_record[1]
+
+        # Reset failed password logins if any
+        self.repo.reset_failed_logins(matched_citizen.id)
+
+        # Determine active persona and kyc tier
+        active_persona = "CUSTOMER"
+        for p in matched_citizen.personas:
+            if p.is_default and p.status == "ACTIVE":
+                active_persona = p.persona_type
+                break
+
+        kyc_tier = "T0"
+        for k in matched_citizen.kyc_records:
+            kyc_tier = k.kyc_tier
+            break
+
+        # Generate signed JWT tokens
+        claims = {
+            "full_name": matched_citizen.full_name,
+            "status": matched_citizen.status,
+            "persona": active_persona,
+            "kyc_tier": kyc_tier,
+            "auth_method": "BIOMETRIC_FACE",
+        }
+        access_token, access_jti, access_exp = create_access_token(str(matched_citizen.id), claims=claims)
+        refresh_token, refresh_jti, refresh_exp = create_refresh_token(str(matched_citizen.id))
+
+        # Store session
+        refresh_hash = hash_otp(refresh_token, str(matched_citizen.id))
+        self.repo.create_session(
+            citizen_id=matched_citizen.id,
+            refresh_token_hash=refresh_hash,
+            expires_at=refresh_exp,
+            device_label=f"{device_label or 'web'} (Face Login)",
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+        self.db.commit()
+
+        expires_in = int((access_exp - datetime.now(timezone.utc)).total_seconds())
+
+        return FaceMatchResponse(
+            success=True,
+            message=f"Biometric face login verified successfully ({best_confidence}% match).",
+            match_confidence=best_confidence,
+            provider=provider_name,
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=expires_in,
+            citizen_id=matched_citizen.id,
+            full_name=matched_citizen.full_name,
+            active_persona=active_persona,
+            kyc_tier=kyc_tier,
+        )

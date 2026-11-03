@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db
 from app.services.auth_service import AuthService
-from app.api.v1.dependencies import get_current_token_meta
+from app.api.v1.dependencies import get_current_token_meta, get_current_citizen
 from app.models.citizen import Citizen
 from app.schemas.auth import (
     CitizenRegisterRequest,
@@ -17,6 +17,9 @@ from app.schemas.auth import (
     RefreshTokenRequest,
     PasswordResetRequest,
     LogoutRequest,
+    FaceLoginRequest,
+    FaceEnrollRequest,
+    FaceMatchResponse,
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Access"])
@@ -146,4 +149,60 @@ def reset_password(
     return {
         "success": True,
         "message": "Password reset successfully. You may now log in with your new password.",
+    }
+
+
+@router.post(
+    "/login-face",
+    response_model=FaceMatchResponse,
+    summary="Biometric Face Recognition Login",
+    description="Authenticates citizen by matching webcam facial embedding against enrolled biometrics.",
+)
+def login_with_face_endpoint(
+    req: FaceLoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    ip_addr = _extract_valid_ip(request)
+    user_agent = request.headers.get("User-Agent")
+    service = AuthService(db)
+    return service.login_with_face(
+        face_image=req.face_image,
+        identifier=req.identifier,
+        device_label=req.device_label,
+        ip_address=ip_addr,
+        user_agent=user_agent,
+    )
+
+
+@router.post(
+    "/enroll-face",
+    summary="Enroll or Update Face Biometrics",
+    description="Registers or updates the authenticated citizen's face descriptor vector.",
+)
+def enroll_face_endpoint(
+    req: FaceEnrollRequest,
+    citizen: Citizen = Depends(get_current_citizen),
+    db: Session = Depends(get_db),
+):
+    service = AuthService(db)
+    return service.enroll_face(citizen_id=citizen.id, face_image=req.face_image)
+
+
+@router.get(
+    "/face-status",
+    summary="Check Face Recognition Enrollment Status",
+    description="Returns whether the authenticated citizen has enrolled face biometrics.",
+)
+def check_face_status(
+    citizen: Citizen = Depends(get_current_citizen),
+    db: Session = Depends(get_db),
+):
+    service = AuthService(db)
+    bio = service.repo.get_biometric(citizen.id, "FACE")
+    return {
+        "success": True,
+        "enrolled": bio is not None and bio.embedding is not None,
+        "model_name": bio.model_name if bio else None,
+        "updated_at": bio.updated_at.isoformat() if bio else None,
     }

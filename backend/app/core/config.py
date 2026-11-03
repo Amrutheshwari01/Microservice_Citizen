@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # Inter-Microservice Service-to-Service Secret
     INTERNAL_SERVICE_SECRET: str = "insecure-internal-secret-for-marketplace-and-rto"
 
+    # AI & Face Recognition (Hugging Face + Local Fallback)
+    HUGGINGFACE_API_KEY: str = ""
+    HUGGINGFACE_MODEL: str = "google/vit-base-patch16-224"
+    FACE_MATCH_THRESHOLD: float = 0.78
+
     # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
