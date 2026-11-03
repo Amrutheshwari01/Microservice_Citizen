@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
+import HomePage from './components/HomePage';
 import AuthModal from './components/AuthModal';
 import MfaModal from './components/MfaModal';
 import PinModal from './components/PinModal';
@@ -59,7 +60,8 @@ export default function App() {
   const [activeSurface, setActiveSurface] = useState('CITIZEN'); // 'CITIZEN' | 'ADMIN'
   const [activeTab, setActiveTab] = useState('dashboard');
   const [language, setLanguage] = useState('en'); // 'en', 'hi', 'kn'
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // First show home/login page, then navigate to dashboard
+  const [authModalMode, setAuthModalMode] = useState('LOGIN');
 
   // Core Data State
   const [citizen, setCitizen] = useState(INITIAL_CITIZEN);
@@ -132,14 +134,64 @@ export default function App() {
   };
 
   // Auth Handlers
+  const handleOpenAuthModal = (mode = 'LOGIN') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  };
+
   const handleLoginSuccess = (loginData) => {
     setIsLoggedIn(true);
+    if (loginData?.full_name) {
+      setCitizen(prev => ({
+        ...prev,
+        citizen_id: loginData.citizen_id || prev.citizen_id,
+        full_name: loginData.full_name,
+        email: loginData.email || prev.email,
+        mobile: loginData.mobile || prev.mobile,
+        active_persona: loginData.active_persona || prev.active_persona,
+        kyc_tier: loginData.kyc_tier || prev.kyc_tier
+      }));
+    }
+    setActiveSurface('CITIZEN');
+    setActiveTab('dashboard');
+    setIsAuthModalOpen(false);
     recordEvent(
       "UserAuthenticated",
       "AUTH-LOGIN",
-      { citizen_id: citizen.citizen_id, method: loginData.method },
-      `Citizen authenticated successfully via ${loginData.method} in 420ms`,
+      { citizen_id: loginData?.citizen_id || citizen.citizen_id, method: loginData?.method || 'PASSWORD' },
+      `Citizen authenticated successfully via ${loginData?.method || 'PASSWORD'} in 420ms`,
       "Registration & Login"
+    );
+  };
+
+  const handleSelectPersonaDemo = (demoPersona) => {
+    setCitizen(prev => ({
+      ...prev,
+      citizen_id: demoPersona.citizen_id || prev.citizen_id,
+      full_name: demoPersona.name,
+      email: demoPersona.email,
+      mobile: demoPersona.mobile,
+      active_persona: demoPersona.id,
+      personas: Array.from(new Set([...prev.personas, demoPersona.id])),
+      kyc_tier: demoPersona.id === 'AGGREGATOR' ? 'T2' : 'T1'
+    }));
+
+    setWallet(prev => ({
+      ...prev,
+      available_balance: demoPersona.balance,
+      total_balance: demoPersona.balance + (prev.held_balance || 0),
+      citizen_id: demoPersona.citizen_id || prev.citizen_id
+    }));
+
+    setIsLoggedIn(true);
+    setActiveSurface('CITIZEN');
+    setActiveTab('dashboard');
+    recordEvent(
+      "PersonaDemoLoaded",
+      "AUTH-DEMO",
+      { persona: demoPersona.id, citizen_id: demoPersona.citizen_id },
+      `Opened verified dashboard for persona ${demoPersona.role} (${demoPersona.name})`,
+      "Citizen Portal"
     );
   };
 
@@ -202,14 +254,14 @@ export default function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setActiveTab('dashboard');
     recordEvent(
       "UserLoggedOut",
       "AUTH-LOGOUT",
       { citizen_id: citizen.citizen_id },
-      `Citizen logged out. Access token added to deny-list .`,
+      `Citizen logged out. Access token added to deny-list. Navigated to Home Page.`,
       "Identity & Token API"
     );
-    setIsAuthModalOpen(true);
   };
 
   // Citizen Transfer Handler (WAL-FR-04)
@@ -802,7 +854,7 @@ export default function App() {
         }}
         unreadCount={unreadNotifs}
         onSwitchPersona={handleSwitchPersona}
-        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onOpenAuthModal={handleOpenAuthModal}
         onLogout={handleLogout}
         isLoggedIn={isLoggedIn}
       />
@@ -810,8 +862,17 @@ export default function App() {
       {/* Main Body Surface */}
       <main className="app-content">
         {activeSurface === 'CITIZEN' ? (
-          <>
-            {activeTab === 'dashboard' && (
+          !isLoggedIn ? (
+            <HomePage 
+              onLoginSuccess={handleLoginSuccess}
+              onOpenRegister={() => handleOpenAuthModal('REGISTER')}
+              onSelectPersonaDemo={handleSelectPersonaDemo}
+              language={language}
+              setLanguage={setLanguage}
+            />
+          ) : (
+            <>
+              {activeTab === 'dashboard' && (
               <CitizenDashboard
                 citizen={citizen}
                 wallet={wallet}
@@ -910,6 +971,7 @@ export default function App() {
               />
             )}
           </>
+          )
         ) : (
           /* ADMIN OPERATIONS SURFACE */
           <>
@@ -988,6 +1050,7 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
         onRegisterSuccess={handleRegisterSuccess}
+        initialMode={authModalMode}
       />
 
       <WalletTransferModal

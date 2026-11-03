@@ -26,9 +26,17 @@ export default function AuthModal({
   isOpen,
   onClose,
   onLoginSuccess,
-  onRegisterSuccess
+  onRegisterSuccess,
+  initialMode = 'LOGIN'
 }) {
-  const [mode, setMode] = useState('LOGIN'); // 'LOGIN', 'REGISTER', 'RECOVER'
+  const [mode, setMode] = useState(initialMode);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setMessage(null);
+    }
+  }, [isOpen, initialMode]);
   
   // Login form state
   const [loginMethod, setLoginMethod] = useState('FACE'); // 'FACE', 'PASSWORD', 'OTP', 'FEDERATED'

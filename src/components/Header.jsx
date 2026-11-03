@@ -289,13 +289,23 @@ export default function Header({
               )}
             </div>
           ) : (
-            <button 
-              className="btn btn-primary btn-sm"
-              onClick={onOpenAuthModal}
-            >
-              <UserCheck size={16} />
-              <span>{t.actions.login}</span>
-            </button>
+            <div className="guest-nav-actions" style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+              <button 
+                className="btn btn-outline btn-sm"
+                onClick={() => onOpenAuthModal('REGISTER')}
+                style={{ fontSize: '0.82rem', padding: '0.45rem 0.85rem', cursor: 'pointer', borderColor: '#cbd5e1' }}
+              >
+                <span>Register ID</span>
+              </button>
+              <button 
+                className="btn btn-primary btn-sm"
+                onClick={() => onOpenAuthModal('LOGIN')}
+                style={{ fontSize: '0.82rem', padding: '0.45rem 0.85rem', cursor: 'pointer' }}
+              >
+                <UserCheck size={15} />
+                <span>Sign In</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -303,67 +313,94 @@ export default function Header({
       {/* Surface Navigation Bar */}
       <div className="sub-nav">
         {activeSurface === 'CITIZEN' ? (
-          <div className="tab-strip">
-            <button 
-              className={`nav-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
-            >
-              <Wallet size={16} />
-              <span>{t.nav.citizenHub}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'statements' ? 'active' : ''}`}
-              onClick={() => setActiveTab('statements')}
-            >
-              <span>{t.nav.statements}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'holds' ? 'active' : ''}`}
-              onClick={() => setActiveTab('holds')}
-            >
-              <span>{t.nav.holds}</span>
-              <span className="count-badge">2</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveTab('profile')}
-            >
-              <span>{t.nav.profileKyc}</span>
-              <span className="badge-pill-tier">{citizen.kyc_tier}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'addresses' ? 'active' : ''}`}
-              onClick={() => setActiveTab('addresses')}
-            >
-              <MapPin size={15} />
-              <span>{t.nav.addresses || 'Addresses'}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'bank' ? 'active' : ''}`}
-              onClick={() => setActiveTab('bank')}
-            >
-              <Building2 size={15} />
-              <span>{t.nav.bank || 'Bank Accounts'}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'personas' ? 'active' : ''}`}
-              onClick={() => setActiveTab('personas')}
-            >
-              <span>{t.nav.personas}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'consent' ? 'active' : ''}`}
-              onClick={() => setActiveTab('consent')}
-            >
-              <span>{t.nav.consent}</span>
-            </button>
-            <button 
-              className={`nav-tab ${activeTab === 'security' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security')}
-            >
-              <span>{t.nav.security}</span>
-            </button>
-          </div>
+          isLoggedIn ? (
+            <div className="tab-strip">
+              <button 
+                className={`nav-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                <Wallet size={16} />
+                <span>{t.nav.citizenHub}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'statements' ? 'active' : ''}`}
+                onClick={() => setActiveTab('statements')}
+              >
+                <span>{t.nav.statements}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'holds' ? 'active' : ''}`}
+                onClick={() => setActiveTab('holds')}
+              >
+                <span>{t.nav.holds}</span>
+                <span className="count-badge">2</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'profile' ? 'active' : ''}`}
+                onClick={() => setActiveTab('profile')}
+              >
+                <span>{t.nav.profileKyc}</span>
+                <span className="badge-pill-tier">{citizen.kyc_tier}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'addresses' ? 'active' : ''}`}
+                onClick={() => setActiveTab('addresses')}
+              >
+                <MapPin size={15} />
+                <span>{t.nav.addresses || 'Addresses'}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'bank' ? 'active' : ''}`}
+                onClick={() => setActiveTab('bank')}
+              >
+                <Building2 size={15} />
+                <span>{t.nav.bank || 'Bank Accounts'}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'personas' ? 'active' : ''}`}
+                onClick={() => setActiveTab('personas')}
+              >
+                <span>{t.nav.personas}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'consent' ? 'active' : ''}`}
+                onClick={() => setActiveTab('consent')}
+              >
+                <span>{t.nav.consent}</span>
+              </button>
+              <button 
+                className={`nav-tab ${activeTab === 'security' ? 'active' : ''}`}
+                onClick={() => setActiveTab('security')}
+              >
+                <span>{t.nav.security}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="tab-strip guest-strip">
+              <button 
+                className="nav-tab active"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                <Sparkles size={14} />
+                <span>Platform Overview & Sign In</span>
+              </button>
+              <a href="#personas-showcase" className="nav-tab">
+                <Layers size={14} />
+                <span>4 Agritech Personas</span>
+              </a>
+              <a href="#personas-showcase" className="nav-tab">
+                <Wallet size={14} />
+                <span>Escrow & Double-Entry</span>
+              </a>
+              <button 
+                className="nav-tab"
+                onClick={() => onOpenAuthModal('REGISTER')}
+              >
+                <ShieldCheck size={14} />
+                <span>Statutory KYC Tiers</span>
+              </button>
+            </div>
+          )
         ) : (
           <div className="tab-strip admin-strip">
             <button 
