@@ -5,7 +5,7 @@ Supports both SMS and WhatsApp delivery channels via Twilio Verify & Messages AP
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import httpx
 from app.core.config import settings
 
@@ -20,9 +20,7 @@ class TwilioSmsService:
         self.messaging_service_sid = (
             settings.TWILIO_MESSAGING_SERVICE_SID or ""
         ).strip()
-        self.verify_service_sid = (
-            settings.TWILIO_VERIFY_SERVICE_SID or ""
-        ).strip()
+        self.verify_service_sid = (settings.TWILIO_VERIFY_SERVICE_SID or "").strip()
 
     @property
     def is_configured(self) -> bool:
@@ -31,9 +29,7 @@ class TwilioSmsService:
             self.account_sid
             and self.auth_token
             and (
-                self.from_phone
-                or self.messaging_service_sid
-                or self.verify_service_sid
+                self.from_phone or self.messaging_service_sid or self.verify_service_sid
             )
         )
 
