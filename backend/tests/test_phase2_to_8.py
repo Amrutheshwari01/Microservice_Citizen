@@ -28,6 +28,7 @@ def _register_citizen(suffix: str = None) -> dict:
             "mobile": mobile,
             "password": "SecurePass@2026",
             "confirm_password": "SecurePass@2026",
+            "nationality_code": "IN",
         },
     )
     assert res.status_code == 201, res.text
