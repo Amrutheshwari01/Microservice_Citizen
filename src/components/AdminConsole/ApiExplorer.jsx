@@ -27,21 +27,21 @@ export default function ApiExplorer({
       method: "GET",
       path: `/v1/wallets/${wallet.wallet_id}/balance`,
       name: "GET /v1/wallets/{id}/balance",
-      purpose: "Available and held balance (WAL-FR-03, Target: 300ms 95th %ile)",
+      purpose: "Available and held balance ",
       defaultPayload: ""
     },
     {
       method: "GET",
       path: `/v1/wallets/${wallet.wallet_id}/transactions?limit=10`,
       name: "GET /v1/wallets/{id}/transactions",
-      purpose: "Filterable double-entry statement (WAL-FR-03)",
+      purpose: "Filterable double-entry statement ",
       defaultPayload: ""
     },
     {
       method: "POST",
       path: "/v1/transfers",
       name: "POST /v1/transfers",
-      purpose: "Direct wallet-to-wallet transfer (WAL-FR-04, Target: 800ms)",
+      purpose: "Direct wallet-to-wallet transfer ",
       defaultPayload: JSON.stringify({
         idempotency_key: "idem-transfer-live-01",
         from_wallet_id: wallet.wallet_id,
@@ -56,12 +56,12 @@ export default function ApiExplorer({
       method: "POST",
       path: "/v1/holds",
       name: "POST /v1/holds",
-      purpose: "Place a hold against a business reference (WAL-FR-05)",
+      purpose: "Place a hold against a business reference ",
       defaultPayload: JSON.stringify({
         idempotency_key: "idem-hold-live-02",
         wallet_id: wallet.wallet_id,
         amount: 15000.00,
-        business_ref: "RTO-M4-FREIGHT-9912",
+        business_ref: "RTO-FREIGHT-9912",
         purpose: "Freight escrow for cold transit",
         expires_at: "2026-11-04T18:00:00Z"
       }, null, 2)
@@ -70,7 +70,7 @@ export default function ApiExplorer({
       method: "POST",
       path: "/v1/holds/HOLD-7712/release",
       name: "POST /v1/holds/{id}/release",
-      purpose: "Release hold with split list (WAL-FR-06)",
+      purpose: "Release hold with split list ",
       defaultPayload: JSON.stringify({
         idempotency_key: "idem-release-split-01",
         splits: [
@@ -84,14 +84,14 @@ export default function ApiExplorer({
       method: "GET",
       path: "/v1/.well-known/jwks.json",
       name: "GET /v1/.well-known/jwks.json",
-      purpose: "Public signing keys for token verification (CID-FR-10)",
+      purpose: "Public signing keys for token verification ",
       defaultPayload: ""
     },
     {
       method: "POST",
       path: "/v1/tokens/introspect",
       name: "POST /v1/tokens/introspect",
-      purpose: "Token introspection and deny-list check (CID-FR-11)",
+      purpose: "Token introspection and deny-list check ",
       defaultPayload: JSON.stringify({
         token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImFncmlsaW5rLWNpcy0yMDI2LWtleS0xIn0..."
       }, null, 2)
@@ -153,7 +153,7 @@ export default function ApiExplorer({
           latency: "124 ms",
           body: {
             success: true,
-            message: "Atomic idempotent ledger operation committed successfully (CIS-N07)",
+            message: "Atomic idempotent ledger operation committed successfully ",
             executed_at: new Date().toISOString(),
             idempotency_key: "idem-committed-ok"
           }
@@ -178,7 +178,7 @@ export default function ApiExplorer({
         <div>
           <h2>Section 5.2 Key APIs & JWKS Explorer</h2>
           <p className="text-muted">
-            Interactive Test Console for Citizen Identity (CID-FR-10, 11) and Double-Entry Wallet Endpoints (Section 5.2 & Section 6.5)
+            Interactive API Test Console for Citizen Identity and Double-Entry Wallet Endpoints
           </p>
         </div>
       </div>

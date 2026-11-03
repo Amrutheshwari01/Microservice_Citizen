@@ -68,7 +68,7 @@ export default function PersonaManagementView({
       license_ref: licenseRef || 'MH-REG-2026-9921',
       notes: notes || 'Verified with relevant district transport / agricultural authority.'
     });
-    setSubmittedMessage(`Application for ${applyModalPersona} submitted successfully to Administrator Approval Queue (CID-FR-08)!`);
+    setSubmittedMessage(`Application for ${applyModalPersona} submitted successfully to Administrator Approval Queue!`);
     setApplyModalPersona(null);
     setFpoName('');
     setLicenseRef('');
@@ -82,7 +82,7 @@ export default function PersonaManagementView({
         <div>
           <h2>Citizen Personas & Dynamic Authorization</h2>
           <p className="text-muted">
-            CID-FR-08 & CID-FR-09 · Multi-Role Identity Claims, Restricted Persona Approvals & Instant Token Switching
+            Multi-Role Identity Claims, Persona Approvals & Seamless Role Switching
           </p>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function PersonaManagementView({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span className="badge badge-green" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }}>
-                CID-FR-09 Active in JWT Token
+                Active Role in Session
               </span>
               <span className="badge badge-purple" style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none' }}>
                 Next Token Carries Claim
@@ -174,7 +174,7 @@ export default function PersonaManagementView({
                 ) : isAssigned ? (
                   <button className="btn btn-primary btn-block" onClick={() => onSwitchPersona(role.id)}>
                     <Layers size={16} />
-                    <span>Switch to this Persona (CID-FR-09)</span>
+                    <span>Switch to this Persona</span>
                   </button>
                 ) : pendingApp ? (
                   <button className="btn btn-secondary btn-block" disabled>
@@ -205,7 +205,7 @@ export default function PersonaManagementView({
                 <Building size={18} className="text-primary" />
                 <div>
                   <h3 style={{ fontSize: '1rem', margin: 0 }}>Apply for Restricted Persona: {applyModalPersona}</h3>
-                  <small className="text-muted">CID-FR-08 · Requires Compliance Desk Approval</small>
+                  <small className="text-muted">Requires Compliance Desk Approval</small>
                 </div>
               </div>
               <button className="btn-close" onClick={() => setApplyModalPersona(null)}><X size={18} /></button>

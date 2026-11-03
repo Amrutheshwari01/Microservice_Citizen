@@ -51,7 +51,7 @@ export default function PinModal({
 
       if (newFails >= 3) {
         setLocked(true);
-        setError('WAL-FR-09 Security Alert: 3 incorrect PIN attempts. Your wallet has been temporarily locked to prevent unauthorized access.');
+        setError('Security Alert: 3 incorrect PIN attempts. Your wallet has been temporarily locked to prevent unauthorized access.');
       } else {
         setError(`Incorrect Wallet PIN. Attempt ${newFails} of 3 before lockout.`);
         setPin('');
@@ -85,7 +85,7 @@ export default function PinModal({
               <h3 style={{ fontSize: '1rem', margin: 0 }}>
                 {isSettingPin ? 'Set Wallet Security PIN' : 'Enter 4-Digit Wallet PIN'}
               </h3>
-              <small className="text-muted">WAL-FR-09 · Double-Entry Safeguard</small>
+              <small className="text-muted">Wallet PIN Safeguard</small>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>

@@ -85,7 +85,7 @@ export default function WalletTransferModal({
             </div>
             <div>
               <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Direct Wallet-to-Wallet Transfer</h3>
-              <small className="text-muted">WAL-FR-04 · Atomic & Idempotent Transfer</small>
+              <small className="text-muted">Atomic & Idempotent Instant Transfer</small>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>
@@ -135,7 +135,7 @@ export default function WalletTransferModal({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Purpose Code (CIS-M6)</label>
+                <label className="form-label">Purpose Code</label>
                 <select 
                   className="form-select"
                   value={purposeCode}
@@ -166,7 +166,7 @@ export default function WalletTransferModal({
 
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <label className="form-label" style={{ margin: 0 }}>Idempotency Key (CIS-N07 Invariant)</label>
+                <label className="form-label" style={{ margin: 0 }}>Idempotency Key</label>
                 <button 
                   type="button" 
                   className="link-btn" 

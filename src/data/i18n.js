@@ -3,7 +3,7 @@
 export const TRANSLATIONS = {
   en: {
     appTitle: "AgriLink Citizen Identity & Wallet",
-    serviceSubtitle: "Microservice 2 · SRS CIS-M1 to CIS-M6",
+    serviceSubtitle: "Citizen Identity & Digital Wallet Platform",
     nav: {
       citizenHub: "Citizen Hub",
       profileKyc: "Profile & KYC",
@@ -12,6 +12,8 @@ export const TRANSLATIONS = {
       security: "Security & Sessions",
       holds: "Escrow & Holds",
       statements: "Statements",
+      addresses: "Addresses",
+      bank: "Bank Accounts",
       adminConsole: "Admin Operations Console",
       backToCitizen: "Back to Citizen Portal"
     },
@@ -69,7 +71,7 @@ export const TRANSLATIONS = {
   },
   hi: {
     appTitle: "एग्रीलिंक नागरिक पहचान और वॉलेट",
-    serviceSubtitle: "माइक्रोसर्विस 2 · एसआरएस सीआईएस-एम1 से एम6",
+    serviceSubtitle: "नागरिक पहचान और डिजिटल वॉलेट प्लेटफॉर्म",
     nav: {
       citizenHub: "नागरिक हब",
       profileKyc: "प्रोफ़ाइल और केवाईसी",
@@ -78,6 +80,8 @@ export const TRANSLATIONS = {
       security: "सुरक्षा और सत्र",
       holds: "एस्क्रो और रोक राशि",
       statements: "खाता विवरण",
+      addresses: "पते (स्थान)",
+      bank: "बैंक खाते",
       adminConsole: "प्रशासक ऑपरेशंस कंसोल",
       backToCitizen: "नागरिक पोर्टल पर लौटें"
     },
@@ -129,13 +133,13 @@ export const TRANSLATIONS = {
     voice: {
       listening: "आपकी आवाज़ सुन रहे हैं...",
       speakNow: "आदेश बोलें, जैसे 'शेष राशि दिखाओ', '५००० रुपये जोड़ो', 'एस्क्रो रोक देखें'...",
-      startVoice: "वॉइस सर्च (एस०७)",
+      startVoice: "वॉइस सर्च",
       stopVoice: "सुनना बंद करें"
     }
   },
   kn: {
     appTitle: "ಅಗ್ರಿಲಿಂಕ್ ನಾಗರಿಕ ಗುರುತು ಮತ್ತು ವಾಲೆಟ್",
-    serviceSubtitle: "ಮೈಕ್ರೋಸರ್ವಿಸ್ ೨ · ಸಿಐಎಸ್-ಎಂ೧ ರಿಂದ ಎಂ೬",
+    serviceSubtitle: "ನಾಗರಿಕ ಗುರುತು ಮತ್ತು ಡಿಜಿಟಲ್ ವಾಲೆಟ್ ವೇದಿಕೆ",
     nav: {
       citizenHub: "ನಾಗರಿಕ ಹಬ್",
       profileKyc: "ಪ್ರೊಫೈಲ್ ಮತ್ತು ಕೆವೈಸಿ",
@@ -144,6 +148,8 @@ export const TRANSLATIONS = {
       security: "ಭದ್ರತೆ ಮತ್ತು ಸೆಷನ್ಗಳು",
       holds: "ಎಸ್ಕ್ರೋ ಮತ್ತು ತಡೆಹಿಡಿದ ಹಣ",
       statements: "ಖಾತೆ ವಿವರಗಳು",
+      addresses: "ವಿಳಾಸಗಳು",
+      bank: "ಬ್ಯಾಂಕ್ ಖಾತೆಗಳು",
       adminConsole: "ಆಡಳಿತ ಮಂಡಳಿ ಕನ್ಸೋಲ್",
       backToCitizen: "ನಾಗರಿಕ ಪೋರ್ಟಲ್‌ಗೆ ಹಿಂತಿರುಗಿ"
     },

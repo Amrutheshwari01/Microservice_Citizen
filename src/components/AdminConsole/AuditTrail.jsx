@@ -46,7 +46,7 @@ export default function AuditTrail({
         <div>
           <h2>Tamper-Evident Hash-Chained Audit Trail</h2>
           <p className="text-muted">
-            CID-FR-14 & CIS-N13 · Append-Only Cryptographic Block-Chained Audit Ledger (5-Year Default Retention)
+            Append-Only Cryptographic Audit Ledger (5-Year Default Retention)
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function AuditTrail({
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--slate-600)' }}>Module:</span>
-            {['ALL', 'CIS-M1', 'CIS-M2', 'CIS-M5', 'CIS-M6'].map(m => (
+            {['ALL', 'AUTHENTICATION', 'PROFILE_KYC', 'CONSENTS', 'WALLET'].map(m => (
               <button
                 key={m}
                 className={`btn btn-sm ${moduleFilter === m ? 'btn-primary' : 'btn-secondary'}`}

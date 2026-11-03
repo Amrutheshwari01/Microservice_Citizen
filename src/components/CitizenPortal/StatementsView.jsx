@@ -33,7 +33,7 @@ export default function StatementsView({
     return matchesSearch && matchesType;
   });
 
-  // Export to CSV function (WAL-FR-03)
+  // Export to CSV function 
   const handleExportCSV = () => {
     const headers = ["Transaction ID", "Business Ref", "Type", "Category", "Amount (INR)", "Fee (INR)", "Counterparty", "Status", "Timestamp", "Idempotency Key"];
     const rows = filteredTransactions.map(tx => [
@@ -66,7 +66,7 @@ export default function StatementsView({
       <div className="view-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h2>Filterable Account Statements</h2>
-          <p className="text-muted">WAL-FR-03 · Double-Entry Ledger Statements with Sub-300ms 95th Percentile Querying</p>
+          <p className="text-muted">Double-Entry Ledger Statements & Transaction History</p>
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -226,7 +226,7 @@ export default function StatementsView({
                 </div>
               </div>
 
-              <h4 style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Ledger Double-Entry Invariant (CIS-N07):</h4>
+              <h4 style={{ fontSize: '0.9rem', marginBottom: '8px' }}>Ledger Double-Entry Invariant:</h4>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', marginBottom: '16px' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-100)', textAlign: 'left' }}>
@@ -273,7 +273,7 @@ export default function StatementsView({
 
               <div className="alert-callout info">
                 <CheckCircle2 size={16} />
-                <span>Verified cryptographically signed ledger entry in PostgreSQL CIS-M6 ledger DB.</span>
+                <span>Verified cryptographically signed entry in double-entry ledger.</span>
               </div>
             </div>
 

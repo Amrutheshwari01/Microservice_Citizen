@@ -43,7 +43,7 @@ export default function EscrowHoldsView({
         <div>
           <h2>Active Escrow Holds & Split Settlements</h2>
           <p className="text-muted">
-            WAL-FR-05 & WAL-FR-06 · Atomic Multi-Actor Escrow Holds with Auto-Expiry & Split Routing
+            Multi-Party Escrow Holds with Auto-Expiry & Split Settlement Routing
           </p>
         </div>
       </div>
@@ -77,7 +77,7 @@ export default function EscrowHoldsView({
             </div>
           </div>
           <p style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '12px' }}>
-            Automates multi-party payments upon release: farmer proceeds, transporter freight, insurance reserve, and platform cess (WAL-FR-06).
+            Automates multi-party payments upon release: farmer proceeds, transporter freight, insurance reserve, and platform cess .
           </p>
         </div>
       </div>
@@ -115,7 +115,7 @@ export default function EscrowHoldsView({
             {/* Split Settlement Breakdown */}
             <div style={{ background: 'var(--slate-50)', padding: '14px', borderRadius: '10px', border: '1px solid var(--slate-200)', marginBottom: '16px' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-700)', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>WAL-FR-06 Atomic Split Routing Table:</span>
+                <span>Atomic Split Routing Table:</span>
                 <span>Invariant: Σ Splits = 100% (₹{hold.held_amount.toFixed(2)})</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -140,7 +140,7 @@ export default function EscrowHoldsView({
                   onClick={() => setDisputeModalHold(hold)}
                 >
                   <AlertTriangle size={14} />
-                  <span>Raise Dispute / Freeze (WAL-FR-10)</span>
+                  <span>Raise Dispute / Freeze</span>
                 </button>
                 <button 
                   className="btn btn-secondary btn-sm"
@@ -171,7 +171,7 @@ export default function EscrowHoldsView({
                 <AlertTriangle size={18} className="text-warning" />
                 <div>
                   <h3 style={{ fontSize: '1rem', margin: 0 }}>Raise Escrow Hold Dispute</h3>
-                  <small className="text-muted">WAL-FR-10 Dispute Freeze</small>
+                  <small className="text-muted">Dispute Freeze Resolution</small>
                 </div>
               </div>
               <button className="btn-close" onClick={() => setDisputeModalHold(null)}>✕</button>

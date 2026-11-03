@@ -13,7 +13,9 @@ import {
   Sparkles,
   Layers,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  MapPin,
+  Building2
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/i18n';
 import { KYC_TIERS_INFO } from '../data/mockData';
@@ -54,10 +56,10 @@ export default function Header({
         <div className="top-banner-inner">
           <div className="service-tag">
             <span className="live-indicator"></span>
-            <strong>AgriLink Ecosystem · Microservice 2</strong>
+            <strong>AgriLink Platform</strong>
             <span className="separator">|</span>
-            <span>Citizen Identity & Wallet Service (CIS-M1 to M6)</span>
-            <span className="spec-version">ATAM / ADR v1.2</span>
+            <span>Citizen Identity & Digital Wallet Platform</span>
+            <span className="spec-version">Secure & Verified</span>
           </div>
 
           <div className="surface-switcher-container">
@@ -135,7 +137,7 @@ export default function Header({
             )}
           </div>
 
-          {/* CID-FR-09: Persona Switcher (When in Citizen Portal & logged in) */}
+          {/* Persona Switcher (When in Citizen Portal & logged in) */}
           {isLoggedIn && activeSurface === 'CITIZEN' && (
             <div className="dropdown-wrapper">
               <button 
@@ -151,7 +153,7 @@ export default function Header({
               {showPersonaMenu && (
                 <div className="dropdown-menu persona-dropdown">
                   <div className="dropdown-header">
-                    <span>Available Personas (CID-FR-09)</span>
+                    <span>Available Personas</span>
                   </div>
                   {citizen.personas.map(persona => (
                     <button
@@ -188,7 +190,7 @@ export default function Header({
             </div>
           )}
 
-          {/* WAL-FR-14: Outbox Notification Bell */}
+          {/* Outbox Notification Bell */}
           <button 
             className="action-icon-btn notif-btn" 
             onClick={onOpenNotifications}
@@ -238,6 +240,28 @@ export default function Header({
                   >
                     <User size={16} />
                     <span>Profile & KYC ({citizen.kyc_tier})</span>
+                  </button>
+                  <button 
+                    className="dropdown-item"
+                    onClick={() => {
+                      setActiveSurface('CITIZEN');
+                      setActiveTab('addresses');
+                      setShowUserMenu(false);
+                    }}
+                  >
+                    <MapPin size={16} />
+                    <span>Manage Addresses</span>
+                  </button>
+                  <button 
+                    className="dropdown-item"
+                    onClick={() => {
+                      setActiveSurface('CITIZEN');
+                      setActiveTab('bank');
+                      setShowUserMenu(false);
+                    }}
+                  >
+                    <Building2 size={16} />
+                    <span>Payout Bank Accounts</span>
                   </button>
                   <button 
                     className="dropdown-item"
@@ -306,6 +330,20 @@ export default function Header({
             >
               <span>{t.nav.profileKyc}</span>
               <span className="badge-pill-tier">{citizen.kyc_tier}</span>
+            </button>
+            <button 
+              className={`nav-tab ${activeTab === 'addresses' ? 'active' : ''}`}
+              onClick={() => setActiveTab('addresses')}
+            >
+              <MapPin size={15} />
+              <span>{t.nav.addresses || 'Addresses'}</span>
+            </button>
+            <button 
+              className={`nav-tab ${activeTab === 'bank' ? 'active' : ''}`}
+              onClick={() => setActiveTab('bank')}
+            >
+              <Building2 size={15} />
+              <span>{t.nav.bank || 'Bank Accounts'}</span>
             </button>
             <button 
               className={`nav-tab ${activeTab === 'personas' ? 'active' : ''}`}

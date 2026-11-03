@@ -35,7 +35,7 @@ export default function AdminOverview({
           </div>
           <h2>Microservice 2 Operations & Finance Control Tower</h2>
           <p className="text-muted">
-            Executive oversight of Citizen Identity (CIS-M1 to M5) and Wallet Double-Entry Ledger (CIS-M6)
+            Executive oversight of Citizen Identity and Wallet Double-Entry Ledger
           </p>
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function AdminOverview({
         <div className="card-header">
           <div>
             <h3>Non-Functional Architecture Compliance (Section 6.3)</h3>
-            <small className="text-muted">ATAM & ADR SLA verification indicators</small>
+            <small className="text-muted">System SLA verification indicators</small>
           </div>
           <span className="badge badge-green">100% HEALTHY</span>
         </div>
@@ -124,7 +124,7 @@ export default function AdminOverview({
           <div className="grid-3">
             <div style={{ background: 'var(--slate-50)', padding: '14px', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                <span>CIS-N10 Auth Login Latency</span>
+                <span>Authentication Login Latency</span>
                 <span className="text-success font-mono">420 ms (Target: &lt;1.5s)</span>
               </div>
               <div className="progress-bar-bg" style={{ height: '6px' }}>
@@ -137,7 +137,7 @@ export default function AdminOverview({
 
             <div style={{ background: 'var(--slate-50)', padding: '14px', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                <span>CIS-N11 Ledger Execution</span>
+                <span>Ledger Transaction Execution</span>
                 <span className="text-success font-mono">180 ms (Target: &lt;800ms)</span>
               </div>
               <div className="progress-bar-bg" style={{ height: '6px' }}>
@@ -150,7 +150,7 @@ export default function AdminOverview({
 
             <div style={{ background: 'var(--slate-50)', padding: '14px', borderRadius: '10px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
-                <span>CIS-N09 Daily Reconciliation</span>
+                <span>Daily Ledger Reconciliation</span>
                 <span className="text-success font-mono">1 hr 12 min (SLA: &lt;2 hrs)</span>
               </div>
               <div className="progress-bar-bg" style={{ height: '6px' }}>
@@ -168,27 +168,27 @@ export default function AdminOverview({
       <h3 style={{ fontSize: '1.15rem', marginBottom: '16px' }}>Microservice 2 Administrative Modules</h3>
       <div className="grid-3" style={{ gap: '16px' }}>
         <div className="card" style={{ padding: '18px', cursor: 'pointer' }} onClick={() => onNavigateTab('admin-approvals')}>
-          <h4 style={{ fontSize: '1rem', color: 'var(--primary-700)', marginBottom: '4px' }}>CID-FR-08 Persona Approvals</h4>
+          <h4 style={{ fontSize: '1rem', color: 'var(--primary-700)', marginBottom: '4px' }}>Persona Approvals Queue</h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', margin: 0 }}>Review high-trust Aggregator and Delivery Person applications.</p>
         </div>
 
         <div className="card" style={{ padding: '18px', cursor: 'pointer' }} onClick={() => onNavigateTab('admin-disputes')}>
-          <h4 style={{ fontSize: '1rem', color: '#b45309', marginBottom: '4px' }}>WAL-FR-10 Dispute Freeze & Resolution</h4>
+          <h4 style={{ fontSize: '1rem', color: '#b45309', marginBottom: '4px' }}>Dispute Freeze Resolution & Resolution</h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', margin: 0 }}>Freeze partial holds to Suspense account; release or refund with reason codes.</p>
         </div>
 
         <div className="card" style={{ padding: '18px', cursor: 'pointer' }} onClick={() => onNavigateTab('admin-audit')}>
-          <h4 style={{ fontSize: '1rem', color: '#1d4ed8', marginBottom: '4px' }}>CID-FR-14 Hash-Chained Audit Trail</h4>
+          <h4 style={{ fontSize: '1rem', color: '#1d4ed8', marginBottom: '4px' }}>Cryptographic Audit Trail</h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', margin: 0 }}>Tamper-evident append-only ledger and authentication events.</p>
         </div>
 
         <div className="card" style={{ padding: '18px', cursor: 'pointer' }} onClick={() => onNavigateTab('admin-limits')}>
-          <h4 style={{ fontSize: '1rem', color: 'var(--slate-800)', marginBottom: '4px' }}>WAL-FR-08 Limits & Velocity Rules</h4>
+          <h4 style={{ fontSize: '1rem', color: 'var(--slate-800)', marginBottom: '4px' }}>Limits & Velocity Rules</h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', margin: 0 }}>Configure per-transaction, daily, and monthly limits per KYC tier.</p>
         </div>
 
         <div className="card" style={{ padding: '18px', cursor: 'pointer' }} onClick={() => onNavigateTab('admin-reconciliation')}>
-          <h4 style={{ fontSize: '1rem', color: 'var(--slate-800)', marginBottom: '4px' }}>WAL-FR-12 Daily Reconciliation</h4>
+          <h4 style={{ fontSize: '1rem', color: 'var(--slate-800)', marginBottom: '4px' }}>Settlement Reconciliation</h4>
           <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', margin: 0 }}>SLA tracking and unmatched item exception handling.</p>
         </div>
 

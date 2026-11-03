@@ -25,13 +25,13 @@ export default function RbacManagement() {
       condition: "Must possess valid mTLS cert + signed JWT with active_persona claim"
     },
     {
-      service: "RTO Logistics (RTO-M4)",
+      service: "RTO Logistics Service",
       policy: "ALLOW_FREIGHT_ESCROW",
       scopes: ["holds:create", "holds:refund", "events:subscribe"],
       condition: "Limited to freight escrow and delivery geo-confirmation"
     },
     {
-      service: "APMC State Mandi (APMC-M3)",
+      service: "APMC State Mandi Service",
       policy: "ALLOW_TRADE_SETTLEMENT",
       scopes: ["holds:create", "split_settlement:post", "cess:levy"],
       condition: "Enforced rate limit: 500 TPS peak"
@@ -44,7 +44,7 @@ export default function RbacManagement() {
         <div>
           <h2>Role-Based Access Control (RBAC) & Service Policies</h2>
           <p className="text-muted">
-            CID-FR-13 · Administrator Role Definitions, Granular Capability Permissions & Machine-to-Machine Service Policies
+            Administrator Role Definitions, Granular Capability Permissions & Service Policies
           </p>
         </div>
       </div>
@@ -55,7 +55,7 @@ export default function RbacManagement() {
           <div className="card-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Users size={18} className="text-primary" />
-              <h3>Administrator Roles (CID-FR-13)</h3>
+              <h3>Administrator Roles</h3>
             </div>
           </div>
           <div className="card-body" style={{ padding: '0 20px' }}>

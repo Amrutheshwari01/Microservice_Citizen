@@ -38,7 +38,7 @@ export default function LimitsVelocity({
         <div>
           <h2>Limits & Velocity Policy Engine</h2>
           <p className="text-muted">
-            WAL-FR-08 · Per-Transaction, Daily, Monthly & Maximum-Balance Ceilings Parameterized by KYC Tier and Persona
+            Per-Transaction, Daily, Monthly & Maximum-Balance Ceilings by KYC Tier and Persona
           </p>
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function LimitsVelocity({
       {saveSuccess && (
         <div className="alert-callout success" style={{ marginBottom: '20px' }}>
           <CheckCircle2 size={18} />
-          <span>Limit rule updated and versioned with effective date timestamp (WAL-FR-08).</span>
+          <span>Limit rule updated and versioned with effective date timestamp .</span>
         </div>
       )}
 
