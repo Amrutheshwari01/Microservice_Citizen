@@ -27,12 +27,10 @@ from app.repositories.citizen_repo import CitizenRepository
 from app.models.persona import Persona
 from app.models.wallet import Wallet
 from app.models.kyc import KycRecord
-from app.models.citizen import Consent
+from app.models.citizen import Citizen, Consent
 from app.services.face_service import face_recognition_service
 from app.services.twilio_service import twilio_service
 from app.schemas.auth import (
-    FaceLoginRequest,
-    FaceEnrollRequest,
     FaceMatchResponse,
     CitizenRegisterRequest,
     CitizenRegisterResponse,
@@ -155,16 +153,22 @@ class AuthService:
             # 8. Face Biometrics Enrollment if provided
             if getattr(req, "face_image", None):
                 try:
-                    embedding, provider_name = face_recognition_service.extract_embedding(req.face_image)
+                    embedding, provider_name = (
+                        face_recognition_service.extract_embedding(req.face_image)
+                    )
                     self.repo.save_biometric(
                         citizen_id=citizen.id,
                         embedding=embedding,
                         model_name=provider_name,
-                        biometric_type="FACE"
+                        biometric_type="FACE",
                     )
-                    logger.info(f"Auto-enrolled face biometrics on registration for citizen {citizen.id}")
+                    logger.info(
+                        f"Auto-enrolled face biometrics on registration for citizen {citizen.id}"
+                    )
                 except Exception as exc:
-                    logger.warning(f"Face enrollment during registration skipped due to error: {exc}")
+                    logger.warning(
+                        f"Face enrollment during registration skipped due to error: {exc}"
+                    )
 
             self.db.commit()
             self.db.refresh(citizen)
@@ -211,11 +215,15 @@ class AuthService:
 
         # Dispatch OTP via Twilio SMS adapter
         logger.info(f"OTP generated for {salt} [{purpose}]: {otp_code}")
-        twilio_res = twilio_service.send_otp(to_phone=destination, otp_code=otp_code, purpose=purpose)
+        twilio_res = twilio_service.send_otp(
+            to_phone=destination, otp_code=otp_code, purpose=purpose
+        )
 
         res = {
             "success": True,
-            "message": twilio_res.get("message", f"OTP successfully dispatched to {destination}"),
+            "message": twilio_res.get(
+                "message", f"OTP successfully dispatched to {destination}"
+            ),
             "provider": twilio_res.get("provider", "twilio"),
             "expires_in_minutes": settings.OTP_EXPIRE_MINUTES,
         }
@@ -427,7 +435,9 @@ class AuthService:
             raise NotFoundException("Citizen not found")
 
         try:
-            embedding, provider_name = face_recognition_service.extract_embedding(face_image)
+            embedding, provider_name = face_recognition_service.extract_embedding(
+                face_image
+            )
         except Exception as exc:
             raise BadRequestException(f"Failed to process face image: {exc}")
 
@@ -435,11 +445,13 @@ class AuthService:
             citizen_id=citizen.id,
             embedding=embedding,
             model_name=provider_name,
-            biometric_type="FACE"
+            biometric_type="FACE",
         )
         self.db.commit()
 
-        logger.info(f"Enrolled face biometrics for citizen {citizen.id} using {provider_name}")
+        logger.info(
+            f"Enrolled face biometrics for citizen {citizen.id} using {provider_name}"
+        )
         return {
             "success": True,
             "message": "Face recognition biometrics enrolled successfully.",
@@ -463,7 +475,9 @@ class AuthService:
            creates session, and logs audit trail.
         """
         try:
-            candidate_emb, provider_name = face_recognition_service.extract_embedding(face_image)
+            candidate_emb, provider_name = face_recognition_service.extract_embedding(
+                face_image
+            )
         except Exception as exc:
             raise BadRequestException(f"Unable to process facial image: {exc}")
 
@@ -474,7 +488,9 @@ class AuthService:
             # 1:1 Targeted Verification
             citizen = self.repo.get_by_identifier(identifier)
             if not citizen:
-                raise UnauthorizedException("No account found matching the provided identifier.")
+                raise UnauthorizedException(
+                    "No account found matching the provided identifier."
+                )
             if citizen.status != "ACTIVE":
                 raise ForbiddenException(f"Account is {citizen.status.lower()}.")
 
@@ -484,7 +500,9 @@ class AuthService:
                     "Face recognition login is not enrolled for this account. Please log in with password or OTP and enroll in settings."
                 )
 
-            is_match, conf = face_recognition_service.verify_match(candidate_emb, bio.embedding)
+            is_match, conf = face_recognition_service.verify_match(
+                candidate_emb, bio.embedding
+            )
             if not is_match:
                 raise UnauthorizedException(
                     f"Face recognition failed: biometric match confidence ({conf}%) is below the security threshold."
@@ -503,7 +521,9 @@ class AuthService:
             for bio, citizen in records:
                 if not bio.embedding:
                     continue
-                is_match, conf = face_recognition_service.verify_match(candidate_emb, bio.embedding)
+                is_match, conf = face_recognition_service.verify_match(
+                    candidate_emb, bio.embedding
+                )
                 if is_match and conf > best_confidence:
                     best_confidence = conf
                     best_match_record = (bio, citizen)
@@ -538,8 +558,12 @@ class AuthService:
             "kyc_tier": kyc_tier,
             "auth_method": "BIOMETRIC_FACE",
         }
-        access_token, access_jti, access_exp = create_access_token(str(matched_citizen.id), claims=claims)
-        refresh_token, refresh_jti, refresh_exp = create_refresh_token(str(matched_citizen.id))
+        access_token, access_jti, access_exp = create_access_token(
+            str(matched_citizen.id), claims=claims
+        )
+        refresh_token, refresh_jti, refresh_exp = create_refresh_token(
+            str(matched_citizen.id)
+        )
 
         # Store session
         refresh_hash = hash_otp(refresh_token, str(matched_citizen.id))

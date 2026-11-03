@@ -23,10 +23,14 @@ class CitizenRegisterRequest(BaseModel):
         "en", max_length=20, description="Language preference (en, hi, kn)"
     )
     nationality_code: str = Field(
-        ..., min_length=2, max_length=2, description="2-letter country code (mandatory, e.g. IN)"
+        ...,
+        min_length=2,
+        max_length=2,
+        description="2-letter country code (mandatory, e.g. IN)",
     )
     face_image: Optional[str] = Field(
-        None, description="Optional Base64 Data URL of face selfie for biometric enrollment"
+        None,
+        description="Optional Base64 Data URL of face selfie for biometric enrollment",
     )
 
     @field_validator("password")
@@ -35,13 +39,19 @@ class CitizenRegisterRequest(BaseModel):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long")
         if not re.search(r"[A-Z]", v):
-            raise ValueError("Password must contain at least one uppercase letter (A-Z)")
+            raise ValueError(
+                "Password must contain at least one uppercase letter (A-Z)"
+            )
         if not re.search(r"[a-z]", v):
-            raise ValueError("Password must contain at least one lowercase letter (a-z)")
+            raise ValueError(
+                "Password must contain at least one lowercase letter (a-z)"
+            )
         if not re.search(r"\d", v):
             raise ValueError("Password must contain at least one digit (0-9)")
         if not re.search(r"[@$!%*?&#^_\-]", v):
-            raise ValueError("Password must contain at least one special character (@$!%*?&#^_-)")
+            raise ValueError(
+                "Password must contain at least one special character (@$!%*?&#^_-)"
+            )
         return v
 
     @field_validator("mobile")
@@ -154,13 +164,21 @@ class LogoutRequest(BaseModel):
 
 
 class FaceLoginRequest(BaseModel):
-    face_image: str = Field(..., description="Base64 Data URL of face selfie captured from camera")
-    identifier: Optional[str] = Field(None, description="Optional email or mobile number to narrow search")
-    device_label: Optional[str] = Field("web", max_length=120, description="Device name / browser")
+    face_image: str = Field(
+        ..., description="Base64 Data URL of face selfie captured from camera"
+    )
+    identifier: Optional[str] = Field(
+        None, description="Optional email or mobile number to narrow search"
+    )
+    device_label: Optional[str] = Field(
+        "web", max_length=120, description="Device name / browser"
+    )
 
 
 class FaceEnrollRequest(BaseModel):
-    face_image: str = Field(..., description="Base64 Data URL of face selfie to enroll or update")
+    face_image: str = Field(
+        ..., description="Base64 Data URL of face selfie to enroll or update"
+    )
 
 
 class FaceMatchResponse(BaseModel):
@@ -176,4 +194,3 @@ class FaceMatchResponse(BaseModel):
     full_name: Optional[str] = None
     active_persona: Optional[str] = None
     kyc_tier: Optional[str] = None
-

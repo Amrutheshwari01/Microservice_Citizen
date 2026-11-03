@@ -127,16 +127,36 @@ async def upload_kyc_document(
     # Validate Indian document patterns at production standard
     if document_number:
         clean_doc = document_number.strip().upper()
-        if document_type == "PAN" and not re.match(r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$", clean_doc):
-            raise BadRequestException("Invalid PAN format. Must be 10 characters: 5 uppercase letters, 4 digits, 1 letter (e.g. ABCDE1234F).")
-        elif document_type == "VOTER_ID" and not re.match(r"^[A-Z]{3}[0-9]{7}$", clean_doc):
-            raise BadRequestException("Invalid Voter ID (EPIC) format. Must be 3 uppercase letters followed by 7 digits (e.g. KLR1234567).")
-        elif document_type == "PASSPORT" and not re.match(r"^[A-PR-WYa-pr-wy][1-9]\d{6}$", clean_doc):
-            raise BadRequestException("Invalid Indian Passport format. Must start with a letter followed by 7 digits (e.g. A1234567).")
-        elif document_type == "GST_CERTIFICATE" and not re.match(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$", clean_doc):
-            raise BadRequestException("Invalid GSTIN format. Must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5).")
-        elif document_type == "AADHAAR" and not re.match(r"^(?:[2-9]\d{11}|\d{4})$", clean_doc.replace(" ", "")):
-            raise BadRequestException("Invalid Aadhaar format. Must be 12 digits or the last 4 masked digits.")
+        if document_type == "PAN" and not re.match(
+            r"^[A-Z]{5}[0-9]{4}[A-Z]{1}$", clean_doc
+        ):
+            raise BadRequestException(
+                "Invalid PAN format. Must be 10 characters: 5 uppercase letters, 4 digits, 1 letter (e.g. ABCDE1234F)."
+            )
+        elif document_type == "VOTER_ID" and not re.match(
+            r"^[A-Z]{3}[0-9]{7}$", clean_doc
+        ):
+            raise BadRequestException(
+                "Invalid Voter ID (EPIC) format. Must be 3 uppercase letters followed by 7 digits (e.g. KLR1234567)."
+            )
+        elif document_type == "PASSPORT" and not re.match(
+            r"^[A-PR-WYa-pr-wy][1-9]\d{6}$", clean_doc
+        ):
+            raise BadRequestException(
+                "Invalid Indian Passport format. Must start with a letter followed by 7 digits (e.g. A1234567)."
+            )
+        elif document_type == "GST_CERTIFICATE" and not re.match(
+            r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$", clean_doc
+        ):
+            raise BadRequestException(
+                "Invalid GSTIN format. Must be 15 alphanumeric characters (e.g. 29ABCDE1234F1Z5)."
+            )
+        elif document_type == "AADHAAR" and not re.match(
+            r"^(?:[2-9]\d{11}|\d{4})$", clean_doc.replace(" ", "")
+        ):
+            raise BadRequestException(
+                "Invalid Aadhaar format. Must be 12 digits or the last 4 masked digits."
+            )
 
     # ── Validate MIME type ────────────────────────────────────────────────────
     if file.content_type not in ALLOWED_CONTENT_TYPES:

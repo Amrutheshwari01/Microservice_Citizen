@@ -1,7 +1,6 @@
 import base64
 import io
 import time
-import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
@@ -11,9 +10,9 @@ client = TestClient(app)
 
 
 def _generate_test_face(r=150, g=120, b=100) -> str:
-    img = Image.new('RGB', (100, 100), color=(r, g, b))
+    img = Image.new("RGB", (100, 100), color=(r, g, b))
     buf = io.BytesIO()
-    img.save(buf, format='JPEG')
+    img.save(buf, format="JPEG")
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 

@@ -2,8 +2,9 @@
 Twilio SMS Notification Adapter for AgriLink Citizen Microservice.
 Complies with SRS CID-FR-01 (Registration with OTP via Notification Provider).
 """
+
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import httpx
 from app.core.config import settings
 
@@ -20,9 +21,15 @@ class TwilioSmsService:
     @property
     def is_configured(self) -> bool:
         """Checks if active Twilio credentials have been supplied."""
-        return bool(self.account_sid and self.auth_token and (self.from_phone or self.messaging_service_sid))
+        return bool(
+            self.account_sid
+            and self.auth_token
+            and (self.from_phone or self.messaging_service_sid)
+        )
 
-    def send_otp(self, to_phone: str, otp_code: str, purpose: str = "registration") -> Dict[str, Any]:
+    def send_otp(
+        self, to_phone: str, otp_code: str, purpose: str = "registration"
+    ) -> Dict[str, Any]:
         """
         Dispatches an OTP SMS to the recipient phone number via Twilio REST API.
         to_phone should be E.164 formatted (e.g. +919876543210).
@@ -46,7 +53,7 @@ class TwilioSmsService:
             return {
                 "success": True,
                 "provider": "twilio_simulation",
-                "message": f"Twilio SMS dispatched (Simulation). Set TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN for live carrier delivery.",
+                "message": "Twilio SMS dispatched (Simulation). Set TWILIO_ACCOUNT_SID & TWILIO_AUTH_TOKEN for live carrier delivery.",
                 "to": cleaned_phone,
                 "dev_otp": otp_code,
             }
@@ -71,7 +78,9 @@ class TwilioSmsService:
 
             if response.status_code in [200, 201]:
                 res_data = response.json()
-                logger.info(f"Twilio SMS sent successfully to {cleaned_phone}. SID: {res_data.get('sid')}")
+                logger.info(
+                    f"Twilio SMS sent successfully to {cleaned_phone}. SID: {res_data.get('sid')}"
+                )
                 return {
                     "success": True,
                     "provider": "twilio",
@@ -81,7 +90,9 @@ class TwilioSmsService:
                     "message": "Verification code dispatched via Twilio SMS carrier network.",
                 }
             else:
-                logger.error(f"Twilio API error {response.status_code}: {response.text}")
+                logger.error(
+                    f"Twilio API error {response.status_code}: {response.text}"
+                )
                 return {
                     "success": False,
                     "provider": "twilio",

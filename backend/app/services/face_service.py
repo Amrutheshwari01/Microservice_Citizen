@@ -8,12 +8,13 @@ Supports:
    (128-dim multi-scale spatial luminance & gradient descriptor with L2 normalization)
 3. Vector Cosine Similarity matching with configurable confidence threshold.
 """
+
 from __future__ import annotations
 
 import base64
 import io
 import logging
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple
 import numpy as np
 from PIL import Image
 import httpx
@@ -79,7 +80,9 @@ class FaceRecognitionService:
                     f"Hugging Face API returned status {response.status_code}: {response.text[:200]}"
                 )
         except Exception as exc:
-            logger.warning(f"Hugging Face inference error: {exc}. Falling back to local pipeline.")
+            logger.warning(
+                f"Hugging Face inference error: {exc}. Falling back to local pipeline."
+            )
 
         return None
 
@@ -104,9 +107,13 @@ class FaceRecognitionService:
         grid_h, grid_w = 64 // 8, 64 // 8
         for i in range(8):
             for j in range(8):
-                cell = arr[i * grid_h:(i + 1) * grid_h, j * grid_w:(j + 1) * grid_w]
+                cell = arr[i * grid_h : (i + 1) * grid_h, j * grid_w : (j + 1) * grid_w]
                 # Luminance: 0.299R + 0.587G + 0.114B
-                lum = 0.299 * cell[:, :, 0] + 0.587 * cell[:, :, 1] + 0.114 * cell[:, :, 2]
+                lum = (
+                    0.299 * cell[:, :, 0]
+                    + 0.587 * cell[:, :, 1]
+                    + 0.114 * cell[:, :, 2]
+                )
                 features.append(float(np.mean(lum)))
 
         # 2. Central Facial Landmark Region (eyes, nose, mouth box: 16:48, 16:48) (32 values)
@@ -116,12 +123,16 @@ class FaceRecognitionService:
         # Vertical gradients
         gy = np.diff(center[:, :, 1], axis=0)
         # Sample 16 gradient energy bins
-        features.extend([float(np.mean(np.abs(gx[k * 8:(k + 1) * 8, :]))) for k in range(4)])
-        features.extend([float(np.mean(np.abs(gy[:, k * 8:(k + 1) * 8]))) for k in range(4)])
+        features.extend(
+            [float(np.mean(np.abs(gx[k * 8 : (k + 1) * 8, :]))) for k in range(4)]
+        )
+        features.extend(
+            [float(np.mean(np.abs(gy[:, k * 8 : (k + 1) * 8]))) for k in range(4)]
+        )
         # Sub-region luminance moments
         for r in range(4):
             for c in range(6):
-                sub = center[r * 8:(r + 1) * 8, c * 5:(c + 1) * 5, 0]
+                sub = center[r * 8 : (r + 1) * 8, c * 5 : (c + 1) * 5, 0]
                 features.append(float(np.std(sub)))
 
         # 3. Frequency & contrast moments (32 values to reach exactly 128)
