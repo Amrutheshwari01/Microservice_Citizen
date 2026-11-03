@@ -73,7 +73,7 @@ export default function WalletTopupModal({
             </div>
             <div>
               <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Top-Up Citizen INR Wallet</h3>
-              <small className="text-muted">WAL-FR-02 · Payment Gateway Adapter</small>
+              <small className="text-muted">Secure Payment Gateway</small>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>
@@ -190,7 +190,7 @@ export default function WalletTopupModal({
             <div className="font-mono" style={{ background: 'var(--slate-100)', padding: '12px', borderRadius: '8px', fontSize: '0.78rem', textAlign: 'left', margin: '16px 0' }}>
               <div><strong>Gateway Ref:</strong> {txDetails.business_ref}</div>
               <div><strong>Idempotency Key:</strong> {txDetails.idempotency_key}</div>
-              <div><strong>Event Published:</strong> <span className="badge badge-green">WalletCredited (WAL-FR-14)</span></div>
+              <div><strong>Event Published:</strong> <span className="badge badge-green">Wallet Credited</span></div>
             </div>
 
             <button className="btn btn-primary btn-block" onClick={onClose}>

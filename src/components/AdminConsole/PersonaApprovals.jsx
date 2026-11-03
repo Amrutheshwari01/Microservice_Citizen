@@ -44,7 +44,7 @@ export default function PersonaApprovals({
         <div>
           <h2>Restricted Persona Approval Queue</h2>
           <p className="text-muted">
-            CID-FR-08 · Administrator Governance for High-Trust Personas: Aggregator (FPO) & Delivery Person (Freight Logistics)
+            Administrator Governance for Restricted Personas: Aggregator (FPO) & Delivery Partner
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function PersonaApprovals({
                         </span>
                         <div>
                           <strong>{app.persona}</strong>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>CIS-M3 Claim</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>Persona Claim</div>
                         </div>
                       </div>
                     </td>

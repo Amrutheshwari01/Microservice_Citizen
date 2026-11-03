@@ -22,7 +22,7 @@ export default function ConsentManagementView({
         <div>
           <h2>Cross-Service Consent Management Matrix</h2>
           <p className="text-muted">
-            CID-FR-12 · Granular Data Governance: Grant and Withdraw Data Sharing Across AgriLink, RTO Logistics, and APMC State Mandi
+            Granular Data Governance: Grant and Withdraw Data Sharing Across AgriLink, RTO Logistics, and APMC State Mandi
           </p>
         </div>
       </div>
@@ -30,7 +30,7 @@ export default function ConsentManagementView({
       <div className="alert-callout info" style={{ marginBottom: '24px' }}>
         <Lock size={18} />
         <div>
-          <strong>Privacy by Design (CIS-N04):</strong>
+          <strong>Privacy by Design:</strong>
           <p style={{ margin: '2px 0 0', fontSize: '0.85rem' }}>
             No personal identity, KYC documents, or transaction ledger data is disclosed to calling microservices without an explicit, cryptographically timestamped consent record in the <code>consent</code> database table.
           </p>

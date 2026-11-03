@@ -47,7 +47,7 @@ export default function DisputesResolution({
         <div>
           <h2>Dispute Freeze & Resolution Center</h2>
           <p className="text-muted">
-            WAL-FR-10 · Partial Hold Freezing, Dispute Suspense Accounting, and Reason-Coded Multi-Actor Resolution
+            Escrow Dispute Freeze & Multi-Actor Resolution
           </p>
         </div>
       </div>
@@ -55,7 +55,7 @@ export default function DisputesResolution({
       <div className="alert-callout warning" style={{ marginBottom: '20px' }}>
         <ShieldAlert size={18} />
         <div>
-          <strong>Dispute Suspense Account Safeguard (CIS-M6):</strong>
+          <strong>Dispute Suspense Account Safeguard:</strong>
           <p style={{ margin: '2px 0 0', fontSize: '0.85rem' }}>
             When a trade or transport milestone is contested, disputed funds are debited from the active escrow hold and credited to the <code>Dispute Suspense (ACC-SYS-SUSPENSE-01)</code> ledger account, freezing them from release until formal adjudication.
           </p>
@@ -168,7 +168,7 @@ export default function DisputesResolution({
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Mandatory Reason Code (WAL-FR-10)</label>
+                  <label className="form-label">Mandatory Reason Code</label>
                   <select 
                     className="form-select"
                     value={reasonCode}

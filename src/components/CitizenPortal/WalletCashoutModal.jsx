@@ -66,7 +66,7 @@ export default function WalletCashoutModal({
             </div>
             <div>
               <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Cash-Out to Verified Bank Account</h3>
-              <small className="text-muted">WAL-FR-07 · Direct Payout via Nodal Rail</small>
+              <small className="text-muted">Direct Payout via Banking Rail</small>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>
@@ -142,7 +142,7 @@ export default function WalletCashoutModal({
                 <strong>₹{amount ? Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 }) : '0.00'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', color: 'var(--slate-600)' }}>
-                <span>Banking Gateway Fee (WAL-FR-13):</span>
+                <span>Banking Gateway Fee:</span>
                 <span>₹{payoutFee.toFixed(2)}</span>
               </div>
               <div style={{ borderTop: '1px solid var(--slate-300)', paddingTop: '6px', marginTop: '6px', display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>

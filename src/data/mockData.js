@@ -1,4 +1,4 @@
-// Citizen Identity & Wallet Service (CIS-M1 to M6) Data Store & Initial State
+// Citizen Identity & Digital Wallet Platform Data Store & Initial State
 
 export const INITIAL_CITIZEN = {
   citizen_id: "CIT-8829-4102",
@@ -125,7 +125,7 @@ export const INITIAL_TRANSACTIONS = [
   },
   {
     id: "TXN-98205",
-    business_ref: "RTO-M4-FREIGHT-9912",
+    business_ref: "RTO-FREIGHT-9912",
     type: "HOLD",
     category: "Transport Escrow",
     purpose_code: "LOGISTICS_FREIGHT_HOLD",
@@ -136,7 +136,7 @@ export const INITIAL_TRANSACTIONS = [
     timestamp: "2026-10-28T11:15:00Z",
     status: "HELD",
     description: "Escrow hold for Nashik-to-Mumbai cold transit",
-    idempotency_key: "idem-rto-m4-9912-hold-01",
+    idempotency_key: "idem-rto-freight-9912-01",
     hold_id: "HOLD-7712"
   },
   {
@@ -189,8 +189,8 @@ export const INITIAL_TRANSACTIONS = [
 export const INITIAL_HOLDS = [
   {
     id: "HOLD-7712",
-    business_ref: "RTO-M4-FREIGHT-9912",
-    module: "RTO-M4 (Logistics)",
+    business_ref: "RTO-FREIGHT-9912",
+    module: "RTO Logistics",
     purpose: "Escrow for Nashik-Mumbai Produce Haulage",
     held_amount: 15000.00,
     currency: "INR",
@@ -301,7 +301,7 @@ export const INITIAL_CONSENTS = [
   },
   {
     id: "CON-02",
-    service_id: "RTO-M4",
+    service_id: "RTO-Logistics",
     service_name: "RTO Rural Logistics & Cold Transit",
     description: "Permits transit fleet tracking, freight escrow creation, and delivery geo-coordinates sharing.",
     granted: true,
@@ -311,7 +311,7 @@ export const INITIAL_CONSENTS = [
   },
   {
     id: "CON-03",
-    service_id: "APMC-M3",
+    service_id: "APMC-Mandi",
     service_name: "APMC State Mandi Electronic Bidding System",
     description: "Allows auto-bidding verification, mandi trade levy debit, and market gate pass token generation.",
     granted: false,
@@ -325,10 +325,10 @@ export const INITIAL_OUTBOX_EVENTS = [
   {
     id: "EVT-8821",
     event_type: "FundsHeld",
-    business_ref: "RTO-M4-FREIGHT-9912",
+    business_ref: "RTO-FREIGHT-9912",
     payload: { wallet_id: "WAL-IN-8829-01", amount: 15000.00, hold_id: "HOLD-7712" },
     timestamp: "2026-10-28T11:15:00Z",
-    delivered_to: ["NotificationProvider", "RTO-M4", "AgriLink-Audit"]
+    delivered_to: ["NotificationProvider", "RTO-Logistics", "AgriLink-Audit"]
   },
   {
     id: "EVT-8819",
@@ -352,7 +352,7 @@ export const INITIAL_OUTBOX_EVENTS = [
     business_ref: "KYC-PROV-9092",
     payload: { citizen_id: "CIT-8829-4102", old_tier: "T0", new_tier: "T1" },
     timestamp: "2026-10-15T10:30:00Z",
-    delivered_to: ["WalletService", "CIS-M4-TokenAuthority", "AgriLink"]
+    delivered_to: ["WalletService", "TokenAuthority", "AgriLink"]
   }
 ];
 
@@ -407,18 +407,18 @@ export const INITIAL_AUDIT_LOGS = [
     block_index: 1042,
     prev_hash: "0000a941f5e8b21c...",
     current_hash: "000072b89114ad32...",
-    module: "CIS-M6 (Citizen Wallet)",
+    module: "Citizen Wallet",
     event_type: "WALLET_HOLD_CREATED",
-    actor: "SERVICE:RTO-M4",
+    actor: "SERVICE:RTO-Logistics",
     target_id: "WAL-IN-8829-01",
-    details: "Escrow hold HOLD-7712 of INR 15,000.00 for logistics reference RTO-M4-FREIGHT-9912",
+    details: "Escrow hold HOLD-7712 of INR 15,000.00 for logistics reference RTO-FREIGHT-9912",
     timestamp: "2026-10-28T11:15:00Z"
   },
   {
     block_index: 1041,
     prev_hash: "00003b128fa199cd...",
     current_hash: "0000a941f5e8b21c...",
-    module: "CIS-M1 (Registration & Login)",
+    module: "Registration & Login",
     event_type: "MFA_VERIFICATION_SUCCESS",
     actor: "CIT-8829-4102",
     target_id: "SES-88291",
@@ -429,7 +429,7 @@ export const INITIAL_AUDIT_LOGS = [
     block_index: 1040,
     prev_hash: "0000c988e1047120...",
     current_hash: "00003b128fa199cd...",
-    module: "CIS-M2 (Profile & KYC)",
+    module: "Profile & KYC",
     event_type: "KYC_TIER_PROMOTED",
     actor: "KYC_PROVIDER_ADAPTER",
     target_id: "CIT-8829-4102",
@@ -440,10 +440,10 @@ export const INITIAL_AUDIT_LOGS = [
     block_index: 1039,
     prev_hash: "00008819aa43bc09...",
     current_hash: "0000c988e1047120...",
-    module: "CIS-M5 (Access & Consent)",
+    module: "Access & Consent",
     event_type: "CONSENT_WITHDRAWN",
     actor: "CIT-8829-4102",
-    target_id: "APMC-M3",
+    target_id: "APMC-Mandi",
     details: "Citizen withdrew data sharing consent for electronic bidding auto-debit",
     timestamp: "2026-10-12T18:00:00Z"
   }
@@ -453,7 +453,7 @@ export const INITIAL_DISPUTES = [
   {
     id: "DISP-2026-004",
     hold_id: "HOLD-7712",
-    business_ref: "RTO-M4-FREIGHT-9912",
+    business_ref: "RTO-FREIGHT-9912",
     complainant: "CIT-8829-4102 (Rameshwar Patel)",
     respondent: "Kisan Logistics Fleet #MH15-8891",
     total_amount: 15000.00,
@@ -591,7 +591,7 @@ export const INITIAL_RECONCILIATION = {
     },
     {
       batch_id: "REC-2026-1029-ESCROW",
-      source: "AgriLink Internal Double-Entry Ledger (CIS-M6)",
+      source: "AgriLink Internal Double-Entry Ledger",
       record_count: 1802,
       total_amount: 24690000.00,
       status: "EXCEPTION_FLAGGED",
@@ -616,7 +616,7 @@ export const INITIAL_RBAC_ROLES = [
   {
     role_id: "ROLE_SUPER_ADMIN",
     name: "Platform Super Administrator",
-    description: "Unrestricted access across CIS-M1 to CIS-M6 microservice operations.",
+    description: "Unrestricted access across Citizen Identity & Wallet operations.",
     permissions: ["user.manage", "kyc.override", "persona.approve", "limits.configure", "disputes.resolve", "audit.read", "reconcile.execute"]
   },
   {
@@ -654,3 +654,64 @@ export const INITIAL_JWKS = {
     active_deny_list_count: 4
   }
 };
+
+
+export const INITIAL_ADDRESSES = [
+  {
+    id: 'ADDR-01',
+    address_type: 'FARM',
+    address_label: 'Main Agricultural Land',
+    house_flat_number: 'Survey No. 44/2',
+    building_name: 'Green Field Organic Farm',
+    street_name: 'Hirapur Mandi Link Road',
+    locality_area: 'Village Hirapur',
+    landmark: 'Near Canal Sluice Gate',
+    city_town: 'Sinnar',
+    district: 'Nashik',
+    state_code: 'MH',
+    postal_code: '422103',
+    country_code: 'IN',
+    is_default: true
+  },
+  {
+    id: 'ADDR-02',
+    address_type: 'RESIDENTIAL',
+    address_label: 'Town Residence',
+    house_flat_number: 'Flat 302',
+    building_name: 'Shree Krishna Heights',
+    street_name: 'Shivaji Chowk Road',
+    locality_area: 'Sinnar Town',
+    landmark: 'Opposite APMC Sub-Yard',
+    city_town: 'Nashik',
+    district: 'Nashik',
+    state_code: 'MH',
+    postal_code: '422103',
+    country_code: 'IN',
+    is_default: false
+  }
+];
+
+export const INITIAL_BANK_ACCOUNTS = [
+  {
+    id: 'BANK-01',
+    bank_name: 'State Bank of India',
+    account_number_masked: '•••• •••• •••• 4590',
+    ifsc_code: 'SBIN0004128',
+    account_holder_name: 'Rameshwar Patel',
+    branch_name: 'Sinnar Main Branch',
+    account_type: 'SAVINGS',
+    is_primary: true,
+    verification_status: 'VERIFIED'
+  },
+  {
+    id: 'BANK-02',
+    bank_name: 'Bank of Baroda',
+    account_number_masked: '•••• •••• •••• 8112',
+    ifsc_code: 'BARB0SINNAR',
+    account_holder_name: 'Rameshwar Patel',
+    branch_name: 'Nashik Market Branch',
+    account_type: 'CURRENT',
+    is_primary: false,
+    verification_status: 'VERIFIED'
+  }
+];

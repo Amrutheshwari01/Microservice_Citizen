@@ -29,7 +29,7 @@ export default function AuthModal({
   const [isLockedOut, setIsLockedOut] = useState(false);
   const [lockoutTime, setLockoutTime] = useState(0);
 
-  // Register form state (CID-FR-01)
+  // Register form state
   const [regMobile, setRegMobile] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regName, setRegName] = useState('');
@@ -38,7 +38,7 @@ export default function AuthModal({
   const [regOtp, setRegOtp] = useState('');
   const [regOtpSent, setRegOtpSent] = useState(false);
 
-  // Recovery form state (CID-FR-04)
+  // Recovery form state
   const [recoverChannel, setRecoverChannel] = useState('MOBILE');
   const [recoverTarget, setRecoverTarget] = useState('');
   const [recoverOtpSent, setRecoverOtpSent] = useState(false);
@@ -52,7 +52,7 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  // Handle Login submission (CID-FR-02)
+  // Handle Login submission
   const handleLogin = (e) => {
     e.preventDefault();
     if (isLockedOut) {
@@ -73,7 +73,7 @@ export default function AuthModal({
     }, 500);
   };
 
-  // Handle Send Register OTP (CID-FR-01)
+  // Handle Send Register OTP
   const handleSendRegOtp = () => {
     if (!regMobile || regMobile.length < 10) {
       setMessage({ type: 'error', text: 'Please enter a valid 10-digit mobile number.' });
@@ -87,7 +87,7 @@ export default function AuthModal({
     }, 400);
   };
 
-  // Handle Register submission (CID-FR-01)
+  // Handle Register submission
   const handleRegister = (e) => {
     e.preventDefault();
     if (!regOtp) {
@@ -114,7 +114,7 @@ export default function AuthModal({
     }, 600);
   };
 
-  // Handle Recovery Submit (CID-FR-04)
+  // Handle Recovery Submit
   const handleRecover = (e) => {
     e.preventDefault();
     if (recoveryLocked) {
@@ -135,7 +135,7 @@ export default function AuthModal({
         setRecoveryAttempts(nextAttempts);
         if (nextAttempts >= 3) {
           setRecoveryLocked(true);
-          setMessage({ type: 'error', text: 'Rate limit exceeded: 3 failed attempts. Account recovery locked for 15 minutes (CID-FR-04).' });
+          setMessage({ type: 'error', text: 'Rate limit exceeded: 3 failed attempts. Account recovery locked for 15 minutes.' });
         } else {
           setMessage({ type: 'error', text: `Invalid OTP. Attempt ${nextAttempts} of 3.` });
         }
@@ -156,7 +156,7 @@ export default function AuthModal({
       <div className="modal-content auth-modal">
         <div className="modal-header">
           <div className="auth-header-title">
-            <span className="badge badge-green">Visitor Authentication · CIS-M1</span>
+            <span className="badge badge-green">Secure Citizen Sign-In</span>
             <h3>
               {mode === 'LOGIN' && 'Sign In to Citizen Identity & Wallet'}
               {mode === 'REGISTER' && 'Register Once · Single Citizen ID'}
@@ -176,7 +176,7 @@ export default function AuthModal({
         )}
 
         <div className="modal-body">
-          {/* LOGIN MODE (CID-FR-02) */}
+          {/* LOGIN MODE */}
           {mode === 'LOGIN' && (
             <div className="auth-login-view">
               {/* Method Tabs: Password, OTP, Federated */}
@@ -226,7 +226,7 @@ export default function AuthModal({
                       onChange={(e) => setPassword(e.target.value)}
                       required 
                     />
-                    <div className="form-help">Passwords never logged in plaintext (CIS-N01).</div>
+                    <div className="form-help">Passwords are end-to-end encrypted and cryptographically hashed.</div>
                   </div>
 
                   <div className="form-row-space">
@@ -345,13 +345,13 @@ export default function AuthModal({
                   className="link-btn-bold"
                   onClick={() => setMode('REGISTER')}
                 >
-                  Create Account (CID-FR-01)
+                  Create Account
                 </button>
               </div>
             </div>
           )}
 
-          {/* REGISTER MODE (CID-FR-01) */}
+          {/* REGISTER MODE */}
           {mode === 'REGISTER' && (
             <form onSubmit={handleRegister} className="auth-register-view">
               <div className="alert-callout info">
@@ -446,7 +446,7 @@ export default function AuthModal({
                     onChange={(e) => setRegOtp(e.target.value)}
                     required 
                   />
-                  <div className="form-help">Rate-limited via Notification Adapter (CID-FR-01)</div>
+                  <div className="form-help">Protected by rate-limiting & fraud prevention</div>
                 </div>
               )}
 
@@ -467,13 +467,13 @@ export default function AuthModal({
             </form>
           )}
 
-          {/* RECOVER ACCESS MODE (CID-FR-04) */}
+          {/* RECOVER ACCESS MODE */}
           {mode === 'RECOVER' && (
             <form onSubmit={handleRecover} className="auth-recover-view">
               <div className="alert-callout warning">
                 <Lock size={16} />
                 <span>
-                  <strong>CID-FR-04 Recovery & Lock-Out:</strong> Forgot-access flow through a verified channel. Exceeding 3 failed attempts triggers temporary lockout to prevent credential stuffing.
+                  <strong>Account Recovery & Security Protection:</strong> Forgot-access flow through a verified channel. Exceeding 3 failed attempts triggers temporary lockout to prevent credential stuffing.
                 </span>
               </div>
 

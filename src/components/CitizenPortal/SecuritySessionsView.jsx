@@ -32,7 +32,7 @@ export default function SecuritySessionsView({
       mfa_threshold_amount: parseFloat(mfaThreshold),
       mfa_method: mfaMethod
     });
-    setSuccessMsg('Security step-up threshold updated successfully! (CIS-N03)');
+    setSuccessMsg('Security step-up threshold updated successfully! ');
     setTimeout(() => setSuccessMsg(null), 4000);
   };
 
@@ -50,7 +50,7 @@ export default function SecuritySessionsView({
         <div>
           <h2>Security, Active Sessions & Token Deny-List</h2>
           <p className="text-muted">
-            CID-FR-03, CID-FR-04 & WAL-FR-09 · Active Device Management, Immediate Token Revocation, and Step-Up Policy Control
+            Active Device Management, Immediate Token Revocation, and Step-Up Policy Control
           </p>
         </div>
       </div>
@@ -68,7 +68,7 @@ export default function SecuritySessionsView({
           <div className="card-header">
             <div>
               <h3>Active Devices & Sessions</h3>
-              <small className="text-muted">CID-FR-03 · Immediate Deny-List Addition</small>
+              <small className="text-muted">Immediate Token Revocation</small>
             </div>
             {sessions.filter(s => !s.current).length > 0 && (
               <button 
@@ -141,7 +141,7 @@ export default function SecuritySessionsView({
             <div className="card-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Lock size={18} className="text-primary" />
-                <h3>Wallet 4-Digit Security PIN (WAL-FR-09)</h3>
+                <h3>Wallet 4-Digit Security PIN</h3>
               </div>
               <span className={`badge ${citizen.wallet_locked ? 'badge-red' : 'badge-green'}`}>
                 {citizen.wallet_locked ? 'LOCKED OUT' : 'PIN ACTIVE'}
@@ -181,7 +181,7 @@ export default function SecuritySessionsView({
                 <ShieldCheck size={18} className="text-primary" />
                 <h3>MFA Step-Up Policy Settings</h3>
               </div>
-              <span className="badge badge-purple">CIS-N03 Security</span>
+              <span className="badge badge-purple">Security Policy</span>
             </div>
 
             <div className="card-body">

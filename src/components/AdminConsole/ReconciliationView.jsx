@@ -33,7 +33,7 @@ export default function ReconciliationView({
         <div>
           <h2>Daily Gateway & Bank Reconciliation</h2>
           <p className="text-muted">
-            WAL-FR-12 & CIS-N09 · Automated Multi-Party Settlement Matching within 2 Hours of File Receipt & 15-Min Exception Alerting
+            Automated Multi-Party Settlement Matching & Exception Alerting
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default function ReconciliationView({
         <div className="card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="text-muted" style={{ fontSize: '0.82rem' }}>Total Reconciled Volume</span>
-            <span className="badge badge-purple">CIS-M6 LEDGER</span>
+            <span className="badge badge-purple">CITIZEN LEDGER</span>
           </div>
           <h2 style={{ fontSize: '1.6rem', color: '#6d28d9', margin: '8px 0 2px' }}>
             ₹4,93,80,000

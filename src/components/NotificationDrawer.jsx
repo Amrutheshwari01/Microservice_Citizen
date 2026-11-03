@@ -61,7 +61,7 @@ export default function NotificationDrawer({
             </div>
             <div>
               <h3 style={{ fontSize: '1rem', margin: 0 }}>Microservice Outbox Relay</h3>
-              <small className="text-muted">WAL-FR-14 · Guaranteed At-Least-Once Delivery</small>
+              <small className="text-muted">Guaranteed At-Least-Once Delivery</small>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>
@@ -149,7 +149,7 @@ export default function NotificationDrawer({
 
         <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
-            Transactional Outbox Pattern (CIS-M6)
+            Real-Time Integration Event Stream
           </span>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             Close Drawer

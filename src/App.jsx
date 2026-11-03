@@ -17,6 +17,8 @@ import ProfileKycView from './components/CitizenPortal/ProfileKycView';
 import PersonaManagementView from './components/CitizenPortal/PersonaManagementView';
 import ConsentManagementView from './components/CitizenPortal/ConsentManagementView';
 import SecuritySessionsView from './components/CitizenPortal/SecuritySessionsView';
+import AddressManagementView from './components/CitizenPortal/AddressManagementView';
+import BankAccountManagementView from './components/CitizenPortal/BankAccountManagementView';
 
 // Admin Console components
 import AdminOverview from './components/AdminConsole/AdminOverview';
@@ -45,7 +47,9 @@ import {
   INITIAL_LIMIT_RULES, 
   INITIAL_FEE_SCHEDULE, 
   INITIAL_RECONCILIATION, 
-  KYC_TIERS_INFO 
+  KYC_TIERS_INFO,
+  INITIAL_ADDRESSES,
+  INITIAL_BANK_ACCOUNTS
 } from './data/mockData';
 
 import './App.css';
@@ -63,6 +67,8 @@ export default function App() {
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [holds, setHolds] = useState(INITIAL_HOLDS);
   const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const [addresses, setAddresses] = useState(INITIAL_ADDRESSES || []);
+  const [bankAccounts, setBankAccounts] = useState(INITIAL_BANK_ACCOUNTS || []);
   const [profileHistory, setProfileHistory] = useState(INITIAL_PROFILE_HISTORY);
   const [consents, setConsents] = useState(INITIAL_CONSENTS);
   const [outboxEvents, setOutboxEvents] = useState(INITIAL_OUTBOX_EVENTS);
@@ -94,7 +100,7 @@ export default function App() {
   const tierLimits = KYC_TIERS_INFO[citizen.kyc_tier] || KYC_TIERS_INFO.T0;
 
   // Add event helper (WAL-FR-14 & CID-FR-14)
-  const recordEvent = (eventType, businessRef, payload, auditDetails, module = "CIS-M6 (Citizen Wallet)") => {
+  const recordEvent = (eventType, businessRef, payload, auditDetails, module = "Citizen Wallet") => {
     // 1. Add outbox event
     const newOutbox = {
       id: `EVT-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -133,7 +139,7 @@ export default function App() {
       "AUTH-LOGIN",
       { citizen_id: citizen.citizen_id, method: loginData.method },
       `Citizen authenticated successfully via ${loginData.method} in 420ms`,
-      "CIS-M1 (Registration & Login)"
+      "Registration & Login"
     );
   };
 
@@ -166,7 +172,7 @@ export default function App() {
       "REG-ONCE",
       { citizen_id: newCitizenData.citizen_id, wallet_id: newWallet.wallet_id },
       `Allocated single permanent citizen_id ${newCitizenData.citizen_id} and initialized INR Ledger Wallet`,
-      "CIS-M1 (Registration & Login)"
+      "Registration & Login"
     );
   };
 
@@ -176,8 +182,8 @@ export default function App() {
       "UserLoggedOut",
       "AUTH-LOGOUT",
       { citizen_id: citizen.citizen_id },
-      `Citizen logged out. Access token added to deny-list (CID-FR-11).`,
-      "CIS-M4 (Identity & Token API)"
+      `Citizen logged out. Access token added to deny-list .`,
+      "Identity & Token API"
     );
     setIsAuthModalOpen(true);
   };
@@ -338,7 +344,7 @@ export default function App() {
       counterparty: "Split Beneficiaries",
       timestamp: new Date().toISOString(),
       status: "COMPLETED",
-      description: `Atomic release to ${hold.splits.length} split recipients (WAL-FR-06)`,
+      description: `Atomic release to ${hold.splits.length} split recipients `,
       idempotency_key: `idem-release-${holdId}`
     };
     setTransactions(prev => [newTx, ...prev]);
@@ -347,7 +353,7 @@ export default function App() {
       "FundsReleased",
       hold.business_ref,
       { hold_id: holdId, released_amount: hold.held_amount, splits_count: hold.splits.length },
-      `Released hold ${holdId} for ${hold.business_ref} with atomic split settlement (WAL-FR-06)`
+      `Released hold ${holdId} for ${hold.business_ref} with atomic split settlement `
     );
   };
 
@@ -410,8 +416,70 @@ export default function App() {
       "DisputeFrozen",
       disputeData.business_ref,
       { dispute_id: newDispute.id, frozen_amount: disputeData.disputed_amount },
-      `Frozen INR ${disputeData.disputed_amount} to Dispute Suspense (WAL-FR-10)`
+      `Frozen INR ${disputeData.disputed_amount} to Dispute Suspense`
     );
+  };
+
+
+  // Address Management Handlers
+  const handleAddAddress = (newAddr) => {
+    const created = {
+      ...newAddr,
+      id: `ADDR-${Date.now().toString().slice(-4)}`
+    };
+    if (created.is_default) {
+      setAddresses(prev => prev.map(a => ({ ...a, is_default: false })).concat(created));
+    } else {
+      setAddresses(prev => [...prev, created]);
+    }
+    recordEvent("AddressAdded", created.id, created, `Citizen added address: ${created.address_label || created.address_type}`, "Profile & KYC");
+  };
+
+  const handleUpdateAddress = (addrId, updatedData) => {
+    setAddresses(prev => prev.map(a => {
+      if (a.id === addrId) {
+        return { ...a, ...updatedData };
+      }
+      if (updatedData.is_default) {
+        return { ...a, is_default: false };
+      }
+      return a;
+    }));
+    recordEvent("AddressUpdated", addrId, updatedData, `Citizen updated address: ${addrId}`, "Profile & KYC");
+  };
+
+  const handleDeleteAddress = (addrId) => {
+    setAddresses(prev => prev.filter(a => a.id !== addrId));
+    recordEvent("AddressDeleted", addrId, {}, `Citizen removed address: ${addrId}`, "Profile & KYC");
+  };
+
+  const handleSetDefaultAddress = (addrId) => {
+    setAddresses(prev => prev.map(a => ({
+      ...a,
+      is_default: a.id === addrId
+    })));
+  };
+
+  // Bank Account Management Handlers
+  const handleAddBankAccount = (newAccount) => {
+    if (newAccount.is_primary) {
+      setBankAccounts(prev => prev.map(b => ({ ...b, is_primary: false })).concat(newAccount));
+    } else {
+      setBankAccounts(prev => [...prev, newAccount]);
+    }
+    recordEvent("BankAccountLinked", newAccount.id, newAccount, `Citizen linked bank account: ${newAccount.bank_name}`, "Citizen Wallet");
+  };
+
+  const handleDeleteBankAccount = (bankId) => {
+    setBankAccounts(prev => prev.filter(b => b.id !== bankId));
+    recordEvent("BankAccountRemoved", bankId, {}, `Citizen removed bank account: ${bankId}`, "Citizen Wallet");
+  };
+
+  const handleSetDefaultBankAccount = (bankId) => {
+    setBankAccounts(prev => prev.map(b => ({
+      ...b,
+      is_primary: b.id === bankId
+    })));
   };
 
   // Profile Update (CID-FR-05)
@@ -439,7 +507,7 @@ export default function App() {
       "CID-PROFILE-UPDATE",
       { citizen_id: citizen.citizen_id, field: changedField },
       `Citizen updated profile field: ${changedField}`,
-      "CIS-M2 (Profile & KYC)"
+      "Profile & KYC"
     );
   };
 
@@ -472,7 +540,7 @@ export default function App() {
       "KYC-PROV-UPGRADE",
       { citizen_id: citizen.citizen_id, old_tier: citizen.kyc_tier, new_tier: newTier },
       `Promoted citizen to ${newTier} following document tokenization`,
-      "CIS-M2 (Profile & KYC)"
+      "Profile & KYC"
     );
   };
 
@@ -484,7 +552,7 @@ export default function App() {
       "CID-PERSONA-SWITCH",
       { citizen_id: citizen.citizen_id, active_persona: newPersona },
       `Citizen switched active persona to ${newPersona}. Next JWT carries updated claim.`,
-      "CIS-M3 (Role / Persona Management)"
+      "Role & Persona Management"
     );
   };
 
@@ -510,7 +578,7 @@ export default function App() {
       newApp.id,
       { applicant_id: citizen.citizen_id, persona: appData.persona },
       `Application submitted for restricted persona ${appData.persona}`,
-      "CIS-M3 (Role / Persona Management)"
+      "Role & Persona Management"
     );
   };
 
@@ -533,7 +601,7 @@ export default function App() {
       consentId,
       { consent_id: consentId, granted },
       `Citizen ${granted ? 'granted' : 'withdrew'} data access for service`,
-      "CIS-M5 (Access, Consent & Audit)"
+      "Access, Consent & Audit"
     );
   };
 
@@ -544,8 +612,8 @@ export default function App() {
       "SessionRevoked",
       sessionId,
       { session_id: sessionId },
-      `Session revoked. Refresh token rotated & placed in deny-list (CID-FR-11)`,
-      "CIS-M1 (Registration & Login)"
+      `Session revoked. Refresh token rotated & placed in deny-list `,
+      "Registration & Login"
     );
   };
 
@@ -555,8 +623,8 @@ export default function App() {
       "AllOtherSessionsRevoked",
       "BULK-REVOKE",
       { citizen_id: citizen.citizen_id },
-      `Revoked all other devices. Tokens pushed to deny-list (CID-FR-11)`,
-      "CIS-M1 (Registration & Login)"
+      `Revoked all other devices. Tokens pushed to deny-list `,
+      "Registration & Login"
     );
   };
 
@@ -614,7 +682,7 @@ export default function App() {
       appId,
       { application_id: appId, notes },
       `Compliance desk approved restricted persona application`,
-      "CIS-M3 (Role / Persona Management)"
+      "Role & Persona Management"
     );
   };
 
@@ -625,7 +693,7 @@ export default function App() {
       appId,
       { application_id: appId, reason },
       `Compliance desk rejected persona application: ${reason}`,
-      "CIS-M3 (Role / Persona Management)"
+      "Role & Persona Management"
     );
   };
 
@@ -649,7 +717,7 @@ export default function App() {
       dispute_id,
       { dispute_id, action, reason_code },
       `Dispute resolved via ${reason_code}: ${admin_notes}`,
-      "CIS-M6 (Citizen Wallet)"
+      "Citizen Wallet"
     );
   };
 
@@ -660,7 +728,7 @@ export default function App() {
       updatedRule.id,
       updatedRule,
       `Limit rule ${updatedRule.id} updated by Finance Operations`,
-      "CIS-M6 (Citizen Wallet)"
+      "Citizen Wallet"
     );
   };
 
@@ -671,7 +739,7 @@ export default function App() {
       newRule.id,
       newRule,
       `New fee schedule created for ${newRule.service}`,
-      "CIS-M6 (Citizen Wallet)"
+      "Citizen Wallet"
     );
   };
 
@@ -685,7 +753,7 @@ export default function App() {
       excId,
       { exception_id: excId },
       `Exception ${excId} resolved via midnight time-boundary auto-adjustment`,
-      "CIS-M6 (Citizen Wallet)"
+      "Citizen Wallet"
     );
   };
 
@@ -754,6 +822,26 @@ export default function App() {
                 onReleaseHold={handleReleaseHold}
                 onRefundHold={handleRefundHold}
                 onRaiseDispute={handleRaiseDispute}
+              />
+            )}
+
+
+            {activeTab === 'addresses' && (
+              <AddressManagementView
+                addresses={addresses}
+                onAddAddress={handleAddAddress}
+                onUpdateAddress={handleUpdateAddress}
+                onDeleteAddress={handleDeleteAddress}
+                onSetDefaultAddress={handleSetDefaultAddress}
+              />
+            )}
+
+            {activeTab === 'bank' && (
+              <BankAccountManagementView
+                bankAccounts={bankAccounts}
+                onAddBankAccount={handleAddBankAccount}
+                onDeleteBankAccount={handleDeleteBankAccount}
+                onSetDefaultBankAccount={handleSetDefaultBankAccount}
               />
             )}
 
@@ -914,7 +1002,7 @@ export default function App() {
         onSuccess={(newPin) => {
           if (isPinSettingMode && newPin) {
             setCitizen(prev => ({ ...prev, wallet_pin: newPin, wallet_pin_set: true }));
-            recordEvent("PinChanged", "PIN-SET", {}, "Wallet security PIN updated by citizen (WAL-FR-09)");
+            recordEvent("PinChanged", "PIN-SET", {}, "Wallet security PIN updated by citizen");
           } else {
             handlePinSuccessForCashout();
           }

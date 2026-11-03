@@ -44,7 +44,7 @@ export default function FeeScheduleView({
         <div>
           <h2>Fee Schedules & Platform Revenue Accounting</h2>
           <p className="text-muted">
-            WAL-FR-13 · Automated Commission Calculations, Levies, and Real-Time Postings to Platform Revenue Ledger
+            Automated Commission Calculations, Levies, and Platform Postings
           </p>
         </div>
 

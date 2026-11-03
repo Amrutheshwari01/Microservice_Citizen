@@ -44,7 +44,7 @@ export default function CitizenDashboard({
       <div className="dashboard-welcome-banner">
         <div className="welcome-text">
           <div className="citizen-badge-row">
-            <span className="badge badge-green">CIS-M1 Verified Citizen</span>
+            <span className="badge badge-green">Verified Citizen</span>
             <span className="badge badge-blue">Single ID: {citizen.citizen_id}</span>
             <span className="badge badge-purple">Active Persona: {citizen.active_persona}</span>
           </div>
@@ -54,7 +54,7 @@ export default function CitizenDashboard({
 
         <div className="tier-card-cta" onClick={onViewTierDetails}>
           <div className="tier-header">
-            <span className="tier-label">KYC Status (CIS-M2)</span>
+            <span className="tier-label">KYC Verification Status</span>
             <span className="tier-pill" style={{ backgroundColor: tierInfo.color }}>
               {tierInfo.badge}
             </span>
@@ -78,7 +78,7 @@ export default function CitizenDashboard({
             <div className="icon-wrap available-icon">
               <Wallet size={24} />
             </div>
-            <div className="currency-badge">INR (₹) · CIS-M6</div>
+            <div className="currency-badge">Indian Rupee (INR)</div>
           </div>
           <div className="card-middle">
             <span className="balance-label">{t.wallet.balanceAvailable}</span>
@@ -113,7 +113,7 @@ export default function CitizenDashboard({
             <div className="icon-wrap held-icon">
               <Clock size={24} />
             </div>
-            <span className="badge badge-amber">Active Escrows (WAL-FR-05)</span>
+            <span className="badge badge-amber">Active Escrow Holds</span>
           </div>
           <div className="card-middle">
             <span className="balance-label">{t.wallet.balanceHeld}</span>
@@ -201,7 +201,7 @@ export default function CitizenDashboard({
         </div>
       </div>
 
-      {/* Recent Ledger Statements (WAL-FR-03) */}
+      {/* Recent Ledger Transactions */}
       <div className="card recent-tx-card">
         <div className="card-header">
           <div>

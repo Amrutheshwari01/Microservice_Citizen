@@ -6,7 +6,7 @@ export default function MfaModal({
   onClose,
   onVerified,
   actionTitle = "Sensitive Action",
-  thresholdNote = "Step-up authentication required by policy (CIS-N03 / WAL-FR-11)"
+  thresholdNote = "Step-up authentication required for high-value wallet transactions"
 }) {
   const [otp, setOtp] = useState('');
   const [method, setMethod] = useState('SMS_OTP'); // 'SMS_OTP', 'AUTHENTICATOR'
@@ -40,7 +40,7 @@ export default function MfaModal({
             </div>
             <div>
               <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Step-Up MFA Challenge</h3>
-              <small className="text-muted">CIS-M1 · Step-Up Verification</small>
+              <small className="text-muted">Two-Factor Security Verification</small>
             </div>
           </div>
           <button className="btn-close" onClick={onClose}><X size={18} /></button>
