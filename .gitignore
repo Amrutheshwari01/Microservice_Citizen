@@ -31,3 +31,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 .venv*/
+
+# Generated Documents & Presentation Scripts (keep local, do not push to github)
+docs/
+*.docx
+*.doc
+*.pdf
