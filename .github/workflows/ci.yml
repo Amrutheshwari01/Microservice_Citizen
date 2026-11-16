@@ -1,4 +1,5 @@
-name: Citizen Identity Service CI
+
+name: Citizen Identity Service CI/CD
 
 on:
   push:
@@ -82,3 +83,41 @@ jobs:
           file: backend/Dockerfile
           push: false
           tags: agrilink-cis:${{ github.sha }}
+
+  deploy:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    needs: [test, docker-build]
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy application to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Connected to AWS EC2"
+
+            cd ~/Microservice_Citizen
+
+            echo "Pulling latest code..."
+            git pull --ff-only origin main
+
+            cd backend
+
+            echo "Building Docker container..."
+            docker compose build cis-api
+
+            echo "Starting application..."
+            docker compose up -d cis-api
+
+            echo "Checking container status..."
+            docker compose ps
+
+            echo "Checking application health..."
+            curl --fail --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8000/health
+
+            echo "AWS DEPLOYMENT SUCCESSFUL"
