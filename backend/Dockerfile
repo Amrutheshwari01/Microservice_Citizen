@@ -30,6 +30,7 @@ COPY --from=builder /install /usr/local
 
 # Copy application source
 COPY app/ ./app/
+COPY global-bundle.pem /app/global-bundle.pem
 
 # Health-check: call the /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
@@ -43,6 +44,6 @@ EXPOSE 8000
 CMD ["python", "-m", "uvicorn", "app.main:app", \
      "--host", "0.0.0.0", \
      "--port", "8000", \
-     "--workers", "2", \
+     "--workers", "1", \
      "--loop", "uvloop", \
      "--access-log"]
