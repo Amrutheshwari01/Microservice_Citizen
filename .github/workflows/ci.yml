@@ -13,6 +13,8 @@ jobs:
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
+    outputs:
+      pages_api_configured: ${{ steps.api_config.outputs.configured }}
     env:
       VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
@@ -29,11 +31,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Require HTTPS API URL for GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Check public API URL configuration
+        id: api_config
         run: |
           case "${VITE_API_BASE_URL:-}" in
-            https://*/api/v1|https://*/api/v1/) ;;
+            https://*/api/v1|https://*/api/v1/)
+              echo "configured=true" >> "$GITHUB_OUTPUT"
+              ;;
+            "")
+              echo "configured=false" >> "$GITHUB_OUTPUT"
+              echo "::warning::Pages and AWS deployments are skipped until VITE_API_BASE_URL is configured."
+              echo "Set the repository Actions variable VITE_API_BASE_URL to the public HTTPS API URL ending in /api/v1." >> "$GITHUB_STEP_SUMMARY"
+              ;;
             *)
               echo "::error::Set the VITE_API_BASE_URL Actions variable to your public HTTPS API base URL ending in /api/v1."
               exit 1
@@ -44,6 +53,7 @@ jobs:
         run: npm run build -- --base=/Microservice_Citizen/
 
       - name: Upload GitHub Pages artifact
+        if: steps.api_config.outputs.configured == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
@@ -137,7 +147,7 @@ jobs:
     name: Deploy frontend to GitHub Pages
     runs-on: ubuntu-latest
     needs: [frontend, test, docker-build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.frontend.outputs.pages_api_configured == 'true'
     permissions:
       contents: read
       pages: write
@@ -161,10 +171,27 @@ jobs:
     runs-on: ubuntu-latest
     needs: [frontend, test, docker-build]
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.frontend.outputs.pages_api_configured == 'true'
 
     steps:
+      - name: Check EC2 deployment secrets
+        id: ec2_config
+        shell: bash
+        run: |
+          if [ -n "$EC2_HOST" ] && [ -n "$EC2_USER" ] && [ -n "$EC2_SSH_KEY" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::AWS deployment skipped; configure EC2_HOST, EC2_USER, and EC2_SSH_KEY."
+            echo "Set EC2_HOST, EC2_USER, and EC2_SSH_KEY repository Actions secrets to enable backend deployment." >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+
       - name: Deploy application to EC2
+        if: steps.ec2_config.outputs.configured == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}

@@ -124,9 +124,11 @@ variables** under **Settings → Secrets and variables → Actions → Variables
 - `VITE_GOOGLE_CLIENT_ID`: the Google OAuth web client ID, if Google sign-in is
   enabled.
 
-The Pages build now fails instead of publishing a frontend that points at
-`localhost` when `VITE_API_BASE_URL` is missing or not HTTPS. Pushes to `main`
-deploy the frontend automatically to the same Pages URL.
+When `VITE_API_BASE_URL` is missing, CI still validates the frontend and Docker
+images but skips Pages and AWS deployment rather than publishing a frontend
+that points at `localhost`. A malformed non-empty URL fails validation. Once
+the public HTTPS API URL is configured, pushes to `main` deploy the frontend
+automatically to the same Pages URL.
 
 On the API host, configure the backend runtime environment separately:
 
