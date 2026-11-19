@@ -95,6 +95,13 @@ npm run dev
 ```
 The application will be running locally at `http://localhost:5173/`.
 
+### Student Demo
+
+The public, mock-data demo is available at
+https://amrutheshwari01.github.io/Microservice_Citizen/. Select **Demo** on the
+login screen to explore the sample citizen and wallet experience. Demo changes
+are kept in browser memory and do not modify production records.
+
 ### Production Build
 ```bash
 npm run build
