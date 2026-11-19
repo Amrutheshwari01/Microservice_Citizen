@@ -38,6 +38,20 @@ export const authService = {
   },
 
   /**
+   * Login with a Google Identity Services ID token.
+   */
+  async loginWithGoogle(idToken) {
+    const res = await apiClient.post('/auth/login/google', {
+      id_token: idToken
+    });
+    if (res?.access_token) {
+      apiClient.setToken(res.access_token);
+      apiClient.setRefreshToken(res.refresh_token);
+    }
+    return res;
+  },
+
+  /**
    * Biometric Face Recognition Login (matches captured webcam face against enrolled embeddings)
    */
   async loginWithFace(faceImageBase64, identifier = null) {

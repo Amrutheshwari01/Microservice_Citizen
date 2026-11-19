@@ -4,6 +4,9 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
+from google.auth.exceptions import GoogleAuthError, TransportError
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.oauth2 import id_token as google_id_token
 
 from app.core.config import settings
 from app.core.security import (
@@ -22,6 +25,7 @@ from app.core.exceptions import (
     ConflictException,
     NotFoundException,
     ForbiddenException,
+    ServiceUnavailableException,
 )
 from app.repositories.citizen_repo import CitizenRepository
 from app.models.persona import Persona
@@ -308,38 +312,97 @@ class AuthService:
         # Login successful - reset failed attempts
         self.repo.reset_failed_logins(citizen.id)
 
-        # Determine active persona
+        return self._issue_login_tokens(
+            citizen,
+            device_label=req.device_label,
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+    def login_with_google(
+        self,
+        credential: str,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> TokenResponse:
+        if not settings.GOOGLE_CLIENT_ID:
+            raise ServiceUnavailableException(
+                "Google sign-in is not configured on this server."
+            )
+
+        try:
+            claims = google_id_token.verify_oauth2_token(
+                credential,
+                GoogleAuthRequest(),
+                settings.GOOGLE_CLIENT_ID,
+            )
+        except TransportError:
+            raise ServiceUnavailableException(
+                "Google sign-in could not be verified right now. Please try again."
+            )
+        except (GoogleAuthError, ValueError):
+            raise UnauthorizedException(
+                "The Google sign-in credential is invalid or expired."
+            )
+
+        email = claims.get("email")
+        if not email or claims.get("email_verified") is not True:
+            raise UnauthorizedException(
+                "Google sign-in requires a verified email address."
+            )
+
+        citizen = self.repo.get_by_email(email)
+        if not citizen:
+            raise UnauthorizedException(
+                "No citizen account is registered with this Google email. Create an account first."
+            )
+        if citizen.status != "ACTIVE":
+            raise ForbiddenException(
+                f"Account is {citizen.status.lower()}. Please contact support."
+            )
+
+        return self._issue_login_tokens(
+            citizen,
+            device_label="web (Google Sign-In)",
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+    def _issue_login_tokens(
+        self,
+        citizen: Citizen,
+        device_label: Optional[str],
+        ip_address: Optional[str],
+        user_agent: Optional[str],
+    ) -> TokenResponse:
         active_persona = "CUSTOMER"
-        for p in citizen.personas:
-            if p.is_default and p.status == "ACTIVE":
-                active_persona = p.persona_type
+        for persona in citizen.personas:
+            if persona.is_default and persona.status == "ACTIVE":
+                active_persona = persona.persona_type
                 break
 
-        # Generate tokens
         claims = {
             "full_name": citizen.full_name,
             "status": citizen.status,
             "persona": active_persona,
         }
-        access_token, access_jti, access_exp = create_access_token(
+        access_token, _, access_exp = create_access_token(
             str(citizen.id), claims=claims
         )
-        refresh_token, refresh_jti, refresh_exp = create_refresh_token(str(citizen.id))
+        refresh_token, _, refresh_exp = create_refresh_token(str(citizen.id))
 
-        # Store session
         refresh_hash = hash_otp(refresh_token, str(citizen.id))
         self.repo.create_session(
             citizen_id=citizen.id,
             refresh_token_hash=refresh_hash,
             expires_at=refresh_exp,
-            device_label=req.device_label,
+            device_label=device_label,
             ip_address=ip_address,
             user_agent=user_agent,
         )
         self.db.commit()
 
         expires_in = int((access_exp - datetime.now(timezone.utc)).total_seconds())
-
         return TokenResponse(
             success=True,
             access_token=access_token,
@@ -348,6 +411,8 @@ class AuthService:
             expires_in=expires_in,
             citizen_id=citizen.id,
             full_name=citizen.full_name,
+            email=citizen.email_normalized,
+            mobile=citizen.mobile_e164,
             active_persona=active_persona,
             status=citizen.status,
         )
@@ -596,6 +661,8 @@ class AuthService:
             expires_in=expires_in,
             citizen_id=matched_citizen.id,
             full_name=matched_citizen.full_name,
+            email=matched_citizen.email_normalized,
+            mobile=matched_citizen.mobile_e164,
             active_persona=active_persona,
             kyc_tier=kyc_tier,
         )

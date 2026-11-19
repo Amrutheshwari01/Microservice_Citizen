@@ -1,0 +1,11 @@
+.git
+.venv
+backend
+dist
+node_modules
+coverage
+.pytest_cache
+.ruff_cache
+.env
+.env.*
+npm-debug.log

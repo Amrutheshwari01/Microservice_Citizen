@@ -1,4 +1,4 @@
-# AgriLink — Citizen Identity & Wallet Service (CIS-M1 to M6)
+# AgriLink — Citizen Identity & Wallet Service
 
 > **Microservice 2 of the AgriLink Ecosystem**  
 > Layered Requirements Implementation · SRS, ATAM and ADR Report Compliance
@@ -95,18 +95,32 @@ npm run dev
 ```
 The application will be running locally at `http://localhost:5173/`.
 
-### Student Demo
-
-The public, mock-data demo is available at
-https://amrutheshwari01.github.io/Microservice_Citizen/. Select **Demo** on the
-login screen to explore the sample citizen and wallet experience. Demo changes
-are kept in browser memory and do not modify production records.
-
 ### Production Build
 ```bash
 npm run build
 ```
 Generates optimized, minified production assets into the `dist/` folder.
+
+### Google Sign-In
+
+Create a Google OAuth client ID for the frontend's authorized JavaScript origin.
+Set the same client ID as `VITE_GOOGLE_CLIENT_ID` in the frontend `.env` and
+`GOOGLE_CLIENT_ID` in `backend/.env`. Google sign-in verifies the ID token on the
+backend and is available to existing citizen accounts with the same verified
+email address. New citizens should register first.
+
+### Frontend Docker Image
+
+The root `Dockerfile` builds the frontend as a separate static Nginx image; it
+does not include or replace the backend image.
+
+```bash
+docker build --build-arg VITE_API_BASE_URL=https://api.example.com/api/v1 --build-arg VITE_GOOGLE_CLIENT_ID=your-google-client-id -t agrilink-citizen-frontend:latest .
+docker run --rm -p 8080:80 agrilink-citizen-frontend:latest
+```
+
+The API URL must be reachable from the user's browser. Set the Google client's
+authorized JavaScript origin to the deployed frontend origin.
 
 ### Database Operations
 

@@ -131,6 +131,15 @@ class LoginRequest(BaseModel):
     )
 
 
+class GoogleLoginRequest(BaseModel):
+    id_token: str = Field(
+        ...,
+        min_length=1,
+        max_length=8192,
+        description="Google Identity Services ID token",
+    )
+
+
 class TokenResponse(BaseModel):
     success: bool = True
     access_token: str
@@ -139,6 +148,8 @@ class TokenResponse(BaseModel):
     expires_in: int
     citizen_id: uuid.UUID
     full_name: str
+    email: Optional[str] = None
+    mobile: Optional[str] = None
     active_persona: str
     status: str
 
@@ -193,5 +204,7 @@ class FaceMatchResponse(BaseModel):
     expires_in: int = 3600
     citizen_id: Optional[uuid.UUID] = None
     full_name: Optional[str] = None
+    email: Optional[str] = None
+    mobile: Optional[str] = None
     active_persona: Optional[str] = None
     kyc_tier: Optional[str] = None

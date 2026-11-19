@@ -70,6 +70,20 @@ class ForbiddenException(AppException):
         )
 
 
+class ServiceUnavailableException(AppException):
+    def __init__(
+        self,
+        message: str = "Service temporarily unavailable",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            message=message,
+            code="SERVICE_UNAVAILABLE",
+            details=details,
+        )
+
+
 class ConflictException(AppException):
     def __init__(
         self, message: str = "Resource conflict", details: Optional[Any] = None

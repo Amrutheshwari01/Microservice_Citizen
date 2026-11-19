@@ -169,7 +169,7 @@ export default function FaceRecognitionCamera({
       </div>
 
       {/* Camera / Preview Viewport */}
-      <div style={{
+      <div className="face-camera-viewport" style={{
         position: 'relative',
         width: '260px',
         height: '260px',

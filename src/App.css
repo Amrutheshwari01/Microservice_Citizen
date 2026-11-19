@@ -424,6 +424,17 @@
   padding: 28px 24px;
 }
 
+.app-content-auth {
+  max-width: none;
+  padding: 0;
+  display: flex;
+}
+
+.app-content-auth .signin-page {
+  flex: 1;
+  min-height: 100vh;
+}
+
 /* Citizen Dashboard */
 .dashboard-welcome-banner {
   display: flex;

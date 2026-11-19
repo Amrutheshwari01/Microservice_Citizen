@@ -13,6 +13,7 @@ from app.schemas.auth import (
     OtpRequestSchema,
     OtpVerifySchema,
     LoginRequest,
+    GoogleLoginRequest,
     TokenResponse,
     RefreshTokenRequest,
     PasswordResetRequest,
@@ -101,6 +102,27 @@ def login(
     user_agent = request.headers.get("user-agent")
     service = AuthService(db)
     return service.login(req, ip_address=ip_addr, user_agent=user_agent)
+
+
+@router.post(
+    "/login/google",
+    response_model=TokenResponse,
+    summary="Authenticate Citizen with Google",
+    description="Verifies a Google ID token and signs in an existing citizen by verified email.",
+)
+def login_with_google(
+    req: GoogleLoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    ip_addr = _extract_valid_ip(request)
+    user_agent = request.headers.get("user-agent")
+    service = AuthService(db)
+    return service.login_with_google(
+        req.id_token,
+        ip_address=ip_addr,
+        user_agent=user_agent,
+    )
 
 
 @router.post(

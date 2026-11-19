@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     HUGGINGFACE_MODEL: str = "google/vit-base-patch16-224"
     FACE_MATCH_THRESHOLD: float = 0.78
 
+    # Google Identity Services
+    GOOGLE_CLIENT_ID: str = ""
+
     # Twilio SMS Gateway (CID-FR-01 OTP Delivery)
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""

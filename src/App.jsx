@@ -164,37 +164,6 @@ export default function App() {
     );
   };
 
-  const handleSelectPersonaDemo = (demoPersona) => {
-    setCitizen(prev => ({
-      ...prev,
-      citizen_id: demoPersona.citizen_id || prev.citizen_id,
-      full_name: demoPersona.name,
-      email: demoPersona.email,
-      mobile: demoPersona.mobile,
-      active_persona: demoPersona.id,
-      personas: Array.from(new Set([...prev.personas, demoPersona.id])),
-      kyc_tier: demoPersona.id === 'AGGREGATOR' ? 'T2' : 'T1'
-    }));
-
-    setWallet(prev => ({
-      ...prev,
-      available_balance: demoPersona.balance,
-      total_balance: demoPersona.balance + (prev.held_balance || 0),
-      citizen_id: demoPersona.citizen_id || prev.citizen_id
-    }));
-
-    setIsLoggedIn(true);
-    setActiveSurface('CITIZEN');
-    setActiveTab('dashboard');
-    recordEvent(
-      "PersonaDemoLoaded",
-      "AUTH-DEMO",
-      { persona: demoPersona.id, citizen_id: demoPersona.citizen_id },
-      `Opened verified dashboard for persona ${demoPersona.role} (${demoPersona.name})`,
-      "Citizen Portal"
-    );
-  };
-
   const handleRegisterSuccess = (newCitizenData) => {
     const formattedId = newCitizenData.citizen_id || `CIT-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
     const newCitizenObj = {
@@ -835,40 +804,38 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {/* Global Header */}
-      <Header
-        citizen={citizen}
-        activeSurface={activeSurface}
-        setActiveSurface={(surf) => {
-          setActiveSurface(surf);
-          setActiveTab(surf === 'CITIZEN' ? 'dashboard' : 'admin-overview');
-        }}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        language={language}
-        setLanguage={setLanguage}
-        onOpenVoiceSearch={() => setIsVoiceModalOpen(true)}
-        onOpenNotifications={() => {
-          setIsNotifDrawerOpen(true);
-          setUnreadNotifs(0);
-        }}
-        unreadCount={unreadNotifs}
-        onSwitchPersona={handleSwitchPersona}
-        onOpenAuthModal={handleOpenAuthModal}
-        onLogout={handleLogout}
-        isLoggedIn={isLoggedIn}
-      />
+      {isLoggedIn && (
+        <Header
+          citizen={citizen}
+          activeSurface={activeSurface}
+          setActiveSurface={(surf) => {
+            setActiveSurface(surf);
+            setActiveTab(surf === 'CITIZEN' ? 'dashboard' : 'admin-overview');
+          }}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          language={language}
+          setLanguage={setLanguage}
+          onOpenVoiceSearch={() => setIsVoiceModalOpen(true)}
+          onOpenNotifications={() => {
+            setIsNotifDrawerOpen(true);
+            setUnreadNotifs(0);
+          }}
+          unreadCount={unreadNotifs}
+          onSwitchPersona={handleSwitchPersona}
+          onOpenAuthModal={handleOpenAuthModal}
+          onLogout={handleLogout}
+          isLoggedIn={isLoggedIn}
+        />
+      )}
 
       {/* Main Body Surface */}
-      <main className="app-content">
+      <main className={`app-content ${isLoggedIn ? '' : 'app-content-auth'}`}>
         {activeSurface === 'CITIZEN' ? (
           !isLoggedIn ? (
             <HomePage 
               onLoginSuccess={handleLoginSuccess}
               onOpenRegister={() => handleOpenAuthModal('REGISTER')}
-              onSelectPersonaDemo={handleSelectPersonaDemo}
-              language={language}
-              setLanguage={setLanguage}
             />
           ) : (
             <>
