@@ -1,6 +1,24 @@
-version: "3.9"
-
 services:
+  cis-dev-db:
+    image: postgres:16
+    container_name: agrilink-cis-dev-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cis_dev
+      POSTGRES_USER: cis_dev
+      POSTGRES_PASSWORD: ${CIS_DEV_DB_PASSWORD:?CIS_DEV_DB_PASSWORD must be set in backend/.env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - cis_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cis_dev -d cis_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - agrilink-net
 
   # ── Citizen Identity & Wallet API ────────────────────────────────────────
   cis-api:
@@ -16,6 +34,7 @@ services:
       - .env                  # All secrets live in .env – never hardcode here
     environment:
       - DEBUG=false
+      - DATABASE_URL=postgresql+psycopg://cis_dev:${CIS_DEV_DB_PASSWORD}@cis-dev-db:5432/cis_dev
     command:
       - sh
       - -c
@@ -28,11 +47,18 @@ services:
       start_period: 15s
     networks:
       - agrilink-net
+    depends_on:
+      cis-dev-db:
+        condition: service_healthy
 
 networks:
   agrilink-net:
     name: agrilink-network
     driver: bridge
+
+volumes:
+  cis_dev_data:
+    name: cis_dev_data
 
 # ── Notes ──────────────────────────────────────────────────────────────────
 # 1. Database is hosted on Supabase (cloud) – no local Postgres service needed.

@@ -30,6 +30,28 @@ Copy-Item .env.example .env
 # http://localhost:8000/docs
 ```
 
+### Docker Development Database
+
+The PostgreSQL 16 development database is isolated from the application container
+and persists data in the `cis_dev_data` named volume:
+
+```powershell
+cd backend
+docker compose up -d cis-dev-db
+docker compose exec cis-dev-db pg_isready -U cis_dev -d cis_dev
+
+# Run migrations from the host
+.\.venv311\Scripts\python.exe -m alembic upgrade head
+.\.venv311\Scripts\python.exe -m alembic current
+
+# Restart without losing records
+docker compose restart cis-dev-db
+```
+
+The database is published only on `127.0.0.1:5433`. Configure
+`CIS_DEV_DB_PASSWORD` and the host `DATABASE_URL` in `backend/.env`; never use
+production RDS credentials for this database.
+
 ---
 
 ## Project Structure
