@@ -109,6 +109,48 @@ Set the same client ID as `VITE_GOOGLE_CLIENT_ID` in the frontend `.env` and
 backend and is available to existing citizen accounts with the same verified
 email address. New citizens should register first.
 
+### Public GitHub Pages and API configuration
+
+The public frontend is served from
+`https://amrutheshwari01.github.io/Microservice_Citizen/`. GitHub Pages hosts
+static files only; real sign-in and account data require the FastAPI backend and
+a database reachable by that backend.
+
+Before deploying a frontend change to `main`, add these repository **Actions
+variables** under **Settings → Secrets and variables → Actions → Variables**:
+
+- `VITE_API_BASE_URL`: the public HTTPS API base URL, ending in `/api/v1`
+  (for example, `https://api.your-domain.example/api/v1`).
+- `VITE_GOOGLE_CLIENT_ID`: the Google OAuth web client ID, if Google sign-in is
+  enabled.
+
+The Pages build now fails instead of publishing a frontend that points at
+`localhost` when `VITE_API_BASE_URL` is missing or not HTTPS. Pushes to `main`
+deploy the frontend automatically to the same Pages URL.
+
+On the API host, configure the backend runtime environment separately:
+
+- `DATABASE_URL` must point to a managed PostgreSQL database reachable from the
+  API host. The loopback URL in `backend/.env.example` is only for local
+  development and will not work from a cloud server. The app database
+  connection is intentionally not changed by this deployment setup.
+- Set `CORS_ORIGINS` to a JSON list containing
+  `https://amrutheshwari01.github.io` (the origin has no repository path).
+- Configure strong `JWT_SECRET_KEY` and `INTERNAL_SERVICE_SECRET` values, and
+  set `GOOGLE_CLIENT_ID` to the same client ID as the frontend variable.
+
+The existing backend deployment job also needs the `EC2_HOST`, `EC2_USER`, and
+`EC2_SSH_KEY` repository Actions secrets. Its EC2 instance must already have
+Docker, a checked-out repository, and a production `backend/.env` configured.
+Never commit or paste database URLs, private keys, or application secrets into
+this repository.
+
+The deployment wiring does not by itself make every screen production-backed.
+The dashboard still initializes several profile, wallet, and admin views from
+`src/data/mockData.js`; payment top-up/cash-out and external KYC provider flows
+also need real provider integrations and end-to-end testing before handling
+client funds or sensitive identity documents.
+
 ### Frontend Docker Image
 
 The root `Dockerfile` builds the frontend as a separate static Nginx image; it
@@ -121,6 +163,10 @@ docker run --rm -p 8080:80 agrilink-citizen-frontend:latest
 
 The API URL must be reachable from the user's browser. Set the Google client's
 authorized JavaScript origin to the deployed frontend origin.
+
+GitHub Actions builds this frontend image for validation but does not publish it
+to a container registry. GitHub Pages deploys the static `dist/` artifact
+instead. The backend image is built separately from `backend/Dockerfile`.
 
 ### Database Operations
 

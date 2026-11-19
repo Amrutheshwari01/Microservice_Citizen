@@ -13,6 +13,9 @@ jobs:
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -25,6 +28,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Require HTTPS API URL for GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          case "${VITE_API_BASE_URL:-}" in
+            https://*/api/v1|https://*/api/v1/) ;;
+            *)
+              echo "::error::Set the VITE_API_BASE_URL Actions variable to your public HTTPS API base URL ending in /api/v1."
+              exit 1
+              ;;
+          esac
 
       - name: Build frontend
         run: npm run build -- --base=/Microservice_Citizen/
@@ -100,7 +114,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build backend Docker image
         uses: docker/build-push-action@v6
         with:
           context: backend
@@ -108,8 +122,19 @@ jobs:
           push: false
           tags: agrilink-cis:${{ github.sha }}
 
+      - name: Build frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          tags: agrilink-citizen-frontend:${{ github.sha }}
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
+
   pages:
-    name: Deploy student demo to GitHub Pages
+    name: Deploy frontend to GitHub Pages
     runs-on: ubuntu-latest
     needs: [frontend, test, docker-build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -127,7 +152,7 @@ jobs:
         with:
           enablement: true
 
-      - name: Deploy student demo
+      - name: Deploy frontend
         id: deployment
         uses: actions/deploy-pages@v4
 
