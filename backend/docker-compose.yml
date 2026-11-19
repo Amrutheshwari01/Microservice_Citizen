@@ -1,12 +1,14 @@
 services:
   cis-dev-db:
+    profiles:
+      - dev
     image: postgres:16
     container_name: agrilink-cis-dev-db
     restart: unless-stopped
     environment:
       POSTGRES_DB: cis_dev
       POSTGRES_USER: cis_dev
-      POSTGRES_PASSWORD: ${CIS_DEV_DB_PASSWORD:?CIS_DEV_DB_PASSWORD must be set in backend/.env}
+      POSTGRES_PASSWORD: ${CIS_DEV_DB_PASSWORD:-}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
@@ -34,7 +36,6 @@ services:
       - .env                  # All secrets live in .env – never hardcode here
     environment:
       - DEBUG=false
-      - DATABASE_URL=postgresql+psycopg://cis_dev:${CIS_DEV_DB_PASSWORD}@cis-dev-db:5432/cis_dev
     command:
       - sh
       - -c
@@ -47,9 +48,6 @@ services:
       start_period: 15s
     networks:
       - agrilink-net
-    depends_on:
-      cis-dev-db:
-        condition: service_healthy
 
 networks:
   agrilink-net:
@@ -61,7 +59,7 @@ volumes:
     name: cis_dev_data
 
 # ── Notes ──────────────────────────────────────────────────────────────────
-# 1. Database is hosted on Supabase (cloud) – no local Postgres service needed.
+# 1. Local PostgreSQL is opt-in via --profile dev; production uses DATABASE_URL from .env.
 # 2. To start in development mode:
 #      docker compose up --build
 # 3. To run with hot-reload locally (without Docker):

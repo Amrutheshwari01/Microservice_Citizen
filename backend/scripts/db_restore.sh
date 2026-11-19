@@ -6,7 +6,7 @@ if [ -z "${1:-}" ]; then
     exit 2
 fi
 
-if [ -f .env ]; then
+if [ -z "${DATABASE_URL:-}" ] && [ -f .env ]; then
     set -a
     . ./.env
     set +a

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ -f .env ]; then
+if [ -z "${DATABASE_URL:-}" ] && [ -f .env ]; then
     set -a
     . ./.env
     set +a

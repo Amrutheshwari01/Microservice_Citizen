@@ -1,0 +1,7 @@
+services:
+  cis-api:
+    environment:
+      DATABASE_URL: postgresql+psycopg://cis_dev:${CIS_DEV_DB_PASSWORD}@cis-dev-db:5432/cis_dev
+    depends_on:
+      cis-dev-db:
+        condition: service_healthy

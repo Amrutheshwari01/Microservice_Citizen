@@ -37,7 +37,7 @@ and persists data in the `cis_dev_data` named volume:
 
 ```powershell
 cd backend
-docker compose up -d cis-dev-db
+docker compose --profile dev up -d cis-dev-db
 docker compose exec cis-dev-db pg_isready -U cis_dev -d cis_dev
 
 # Run migrations from the host
@@ -50,7 +50,10 @@ docker compose restart cis-dev-db
 
 The database is published only on `127.0.0.1:5433`. Configure
 `CIS_DEV_DB_PASSWORD` and the host `DATABASE_URL` in `backend/.env`; never use
-production RDS credentials for this database.
+production RDS credentials for this database. The dev database is opt-in and
+does not replace the production `DATABASE_URL`. To run the API container against
+this database locally, add `-f docker-compose.dev.yml` and `--profile dev` to
+the Docker Compose commands. Never use that development override on EC2.
 
 ---
 
