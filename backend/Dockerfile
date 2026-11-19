@@ -31,6 +31,8 @@ COPY --from=builder /install /usr/local
 # Copy application source
 COPY app/ ./app/
 COPY global-bundle.pem /app/global-bundle.pem
+COPY alembic.ini ./alembic.ini
+COPY migrations/ ./migrations/
 
 # Health-check: call the /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \

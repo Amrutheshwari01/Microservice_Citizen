@@ -7,6 +7,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: ${CIS_IMAGE:-agrilink-cis:latest}
     container_name: agrilink-cis-api
     restart: unless-stopped
     ports:
@@ -15,6 +16,10 @@ services:
       - .env                  # All secrets live in .env – never hardcode here
     environment:
       - DEBUG=false
+    command:
+      - sh
+      - -c
+      - "python -m alembic upgrade head && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --loop uvloop --access-log"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

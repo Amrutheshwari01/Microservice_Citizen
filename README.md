@@ -101,6 +101,19 @@ npm run build
 ```
 Generates optimized, minified production assets into the `dist/` folder.
 
+### Database Operations
+
+Backend database changes are managed by Alembic. CI applies migrations rather
+than recreating tables with `create_all()`.
+
+```bash
+cd backend
+python -m alembic upgrade head
+```
+
+For production deployment details, backups, migration commands, and rollback
+procedures, follow [backend/README.md](backend/README.md).
+
 ---
 
 ## 📐 Technology Stack

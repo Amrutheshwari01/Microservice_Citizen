@@ -182,6 +182,44 @@ docker compose logs -f cis-api
 docker compose down
 ```
 
+## Database Migrations
+
+The database schema is managed with Alembic. `create_all()` is only retained by
+the initial migration to establish an existing database baseline; application
+and CI startup must use migrations.
+
+```powershell
+# Preview SQL
+python -m alembic upgrade head --sql
+
+# Apply pending migrations
+python -m alembic upgrade head
+
+# Create a migration after changing an ORM model
+python -m alembic revision --autogenerate -m "describe the change"
+```
+
+## Backup and Recovery
+
+The production PostgreSQL database remains separate from the application
+container. EC2 deployment requires `pg_dump` and `pg_restore` to be installed
+on the EC2 host. Supabase or AWS RDS snapshots should also be enabled according
+to the retention and compliance policy.
+
+```bash
+# Create an encrypted, permission-restricted PostgreSQL custom-format backup
+sh ./scripts/db_backup.sh
+
+# Restore only during an approved recovery event
+sh ./scripts/db_restore.sh ./backups/cis-<timestamp>.dump
+```
+
+Deployment executes `db_backup.sh`, builds an immutable image tagged with the
+Git SHA, applies migrations, and starts that image. If the application health
+check fails, the deploy script attempts to start the previous Git SHA image.
+Database migrations are not automatically downgraded; restore the database
+backup and application image together when a migration is not reversible.
+
 ---
 
 ## Security Notes

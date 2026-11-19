@@ -31,6 +31,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 .venv*/
+backend/backups/
 
 # Generated Documents & Presentation Scripts (keep local, do not push to github)
 docs/
