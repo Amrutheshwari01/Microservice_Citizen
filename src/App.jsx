@@ -6,6 +6,7 @@ import MfaModal from './components/MfaModal';
 import PinModal from './components/PinModal';
 import NotificationDrawer from './components/NotificationDrawer';
 import VoiceSearchModal from './components/VoiceSearchModal';
+import authService from './services/authService';
 
 // Citizen Portal components
 import CitizenDashboard from './components/CitizenPortal/CitizenDashboard';
@@ -61,7 +62,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [language, setLanguage] = useState('en'); // 'en', 'hi', 'kn'
   const [isLoggedIn, setIsLoggedIn] = useState(false); // First show home/login page, then navigate to dashboard
-  const [authModalMode, setAuthModalMode] = useState('LOGIN');
+  const [registeredIdentifier, setRegisteredIdentifier] = useState('');
+  const [registrationNotice, setRegistrationNotice] = useState('');
 
   // Core Data State
   const [citizen, setCitizen] = useState(INITIAL_CITIZEN);
@@ -134,12 +136,13 @@ export default function App() {
   };
 
   // Auth Handlers
-  const handleOpenAuthModal = (mode = 'LOGIN') => {
-    setAuthModalMode(mode);
+  const handleOpenAuthModal = () => {
     setIsAuthModalOpen(true);
   };
 
   const handleLoginSuccess = (loginData) => {
+    setRegisteredIdentifier('');
+    setRegistrationNotice('');
     setIsLoggedIn(true);
     if (loginData?.full_name) {
       setCitizen(prev => ({
@@ -164,66 +167,31 @@ export default function App() {
     );
   };
 
-  const handleRegisterSuccess = (newCitizenData) => {
-    const formattedId = newCitizenData.citizen_id || `CIT-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newCitizenObj = {
-      citizen_id: formattedId,
-      full_name: newCitizenData.full_name,
-      email: newCitizenData.email,
-      mobile: newCitizenData.mobile,
-      nationality: newCitizenData.nationality || 'Indian',
-      language: newCitizenData.language || 'en',
-      address: newCitizenData.address || "Address to be added",
-      kyc_tier: 'T0',
-      kyc_status: 'UNVERIFIED',
-      kyc_details: {
-        provider: 'Pending Document Verification'
-      },
-      personas: ['CUSTOMER'],
-      active_persona: 'CUSTOMER',
-      pending_persona_applications: [],
-      verified_bank_accounts: [],
-      mfa_threshold_amount: 10000,
-      mfa_method: 'SMS_OTP',
-      wallet_locked: false,
-      pin_failed_attempts: 0,
-      has_face_enrolled: !!newCitizenData.has_face_enrolled
-    };
-    setCitizen(newCitizenObj);
-
-    const newWallet = {
-      wallet_id: `WAL-IN-${String(formattedId).slice(-4)}-01`,
-      currency: "INR",
-      citizen_id: formattedId,
-      available_balance: 0.00,
-      held_balance: 0.00,
-      total_balance: 0.00,
-      today_spent: 0.00,
-      month_spent: 0.00,
-      last_updated: new Date().toISOString()
-    };
-    setWallet(newWallet);
-    setTransactions([]);
-    setHolds([]);
-    setAddresses([]);
-    setBankAccounts([]);
-    setIsLoggedIn(true);
+  const handleRegisterSuccess = (account) => {
+    const identifier = account.email || account.mobile || '';
+    setRegisteredIdentifier(identifier);
+    setRegistrationNotice('Account created. Sign in with your email or mobile number and password.');
+    setIsLoggedIn(false);
     setActiveSurface('CITIZEN');
     setActiveTab('dashboard');
     setIsAuthModalOpen(false);
-
     recordEvent(
-      "CitizenRegistered",
-      "REG-ONCE",
-      { citizen_id: newCitizenData.citizen_id, wallet_id: newWallet.wallet_id },
-      `Allocated single permanent citizen_id ${newCitizenData.citizen_id} and initialized INR Ledger Wallet`,
-      "Registration & Login"
+      'CitizenRegistered',
+      'REG-ONCE',
+      { citizen_id: account.citizen_id, wallet_id: account.wallet_id },
+      'Created a citizen account. Sign in to access the dashboard.',
+      'Registration & Login'
     );
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoggedIn(false);
     setActiveTab('dashboard');
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.warn('Server logout failed; local authentication tokens were cleared.', error);
+    }
     recordEvent(
       "UserLoggedOut",
       "AUTH-LOGOUT",
@@ -834,8 +802,11 @@ export default function App() {
         {activeSurface === 'CITIZEN' ? (
           !isLoggedIn ? (
             <HomePage 
+              key={registeredIdentifier}
               onLoginSuccess={handleLoginSuccess}
               onOpenRegister={() => handleOpenAuthModal('REGISTER')}
+              registeredIdentifier={registeredIdentifier}
+              registrationNotice={registrationNotice}
             />
           ) : (
             <>
@@ -1015,9 +986,7 @@ export default function App() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
         onRegisterSuccess={handleRegisterSuccess}
-        initialMode={authModalMode}
       />
 
       <WalletTransferModal

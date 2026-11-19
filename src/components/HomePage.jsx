@@ -6,13 +6,20 @@ import './HomePage.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-export default function HomePage({ onLoginSuccess, onOpenRegister }) {
+export default function HomePage({
+  onLoginSuccess,
+  onOpenRegister,
+  registeredIdentifier = '',
+  registrationNotice = ''
+}) {
   const [activeMethod, setActiveMethod] = useState('password');
-  const [identifier, setIdentifier] = useState('');
+  const [identifier, setIdentifier] = useState(registeredIdentifier);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState(null);
+  const [feedback, setFeedback] = useState(() => (
+    registrationNotice ? { type: 'success', text: registrationNotice } : null
+  ));
   const [googleScriptLoaded, setGoogleScriptLoaded] = useState(() => Boolean(window.google?.accounts?.id));
   const [googleScriptFailed, setGoogleScriptFailed] = useState(false);
   const googleButtonRef = useRef(null);

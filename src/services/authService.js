@@ -1,6 +1,6 @@
 /**
  * Authentication Service (FastAPI /api/v1/auth/*)
- * Supports Password, Mobile OTP, and Biometric Face Recognition Login & Enrollment.
+ * Supports password, Google, and biometric face sign-in & enrollment.
  */
 import apiClient from './apiClient';
 
@@ -81,32 +81,6 @@ export const authService = {
    */
   async getFaceStatus() {
     return apiClient.get('/auth/face-status');
-  },
-
-  /**
-   * Request OTP challenge
-   */
-  async requestOtp(channel, destination, purpose = 'LOGIN') {
-    return apiClient.post('/auth/otp/request', {
-      channel, // 'EMAIL' or 'SMS'
-      destination,
-      purpose
-    });
-  },
-
-  /**
-   * Verify OTP challenge
-   */
-  async verifyOtp(challengeId, otp) {
-    const res = await apiClient.post('/auth/otp/verify', {
-      challenge_id: challengeId,
-      otp
-    });
-    if (res?.access_token) {
-      apiClient.setToken(res.access_token);
-      apiClient.setRefreshToken(res.refresh_token);
-    }
-    return res;
   },
 
   /**
