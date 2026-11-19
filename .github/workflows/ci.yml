@@ -40,7 +40,7 @@ jobs:
               ;;
             "")
               echo "configured=false" >> "$GITHUB_OUTPUT"
-              echo "::warning::Pages and AWS deployments are skipped until VITE_API_BASE_URL is configured."
+              echo "::warning::GitHub Pages deployment is skipped until VITE_API_BASE_URL is configured."
               echo "Set the repository Actions variable VITE_API_BASE_URL to the public HTTPS API URL ending in /api/v1." >> "$GITHUB_STEP_SUMMARY"
               ;;
             *)
@@ -171,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [frontend, test, docker-build]
 
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.frontend.outputs.pages_api_configured == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Check EC2 deployment secrets

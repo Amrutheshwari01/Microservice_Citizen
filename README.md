@@ -125,10 +125,11 @@ variables** under **Settings → Secrets and variables → Actions → Variables
   enabled.
 
 When `VITE_API_BASE_URL` is missing, CI still validates the frontend and Docker
-images but skips Pages and AWS deployment rather than publishing a frontend
-that points at `localhost`. A malformed non-empty URL fails validation. Once
-the public HTTPS API URL is configured, pushes to `main` deploy the frontend
-automatically to the same Pages URL.
+images but skips GitHub Pages deployment rather than publishing a frontend that
+points at `localhost`. The AWS backend deployment remains independent and runs
+on pushes to `main` when the required EC2 secrets are configured. A malformed
+non-empty API URL fails validation. Once the public HTTPS API URL is configured,
+pushes to `main` also deploy the frontend automatically to the same Pages URL.
 
 On the API host, configure the backend runtime environment separately:
 
