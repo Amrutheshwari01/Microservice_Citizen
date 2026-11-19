@@ -59,33 +59,37 @@ class ApiClient {
       headers['Content-Type'] = 'application/json';
     }
 
+    let response;
     try {
-      const response = await fetch(url, {
+      response = await fetch(url, {
         ...options,
         headers
       });
-
-      // 204 No Content
-      if (response.status === 204) {
-        return null;
-      }
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok) {
-        const errorMessage = data?.message || data?.detail?.message || data?.detail;
-        const error = new Error(errorMessage || `Request failed with status ${response.status}`);
-        error.status = response.status;
-        error.code = data?.code || 'API_ERROR';
-        error.details = data?.details;
-        throw error;
-      }
-
-      return data;
-    } catch (err) {
-      // Re-throw normalized error
-      throw err;
+    } catch {
+      const networkError = new Error(
+        'Unable to connect to the Citizen API. Check that the backend is running and the API URL is correct.'
+      );
+      networkError.code = 'NETWORK_ERROR';
+      throw networkError;
     }
+
+    // 204 No Content
+    if (response.status === 204) {
+      return null;
+    }
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const errorMessage = data?.message || data?.detail?.message || data?.detail;
+      const error = new Error(errorMessage || `Request failed with status ${response.status}`);
+      error.status = response.status;
+      error.code = data?.code || 'API_ERROR';
+      error.details = data?.details;
+      throw error;
+    }
+
+    return data;
   }
 
   get(endpoint, headers = {}) {
