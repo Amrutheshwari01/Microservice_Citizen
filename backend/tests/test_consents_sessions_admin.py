@@ -7,6 +7,7 @@ import uuid
 import secrets
 from fastapi.testclient import TestClient
 
+from app.api.v1 import kyc as kyc_api
 from app.main import app
 from app.core.config import settings
 
@@ -153,7 +154,23 @@ class TestAdmin:
         farmer_p = [p for p in personas_res.json()["data"] if p["id"] == persona_id][0]
         assert farmer_p["status"] == "ACTIVE"
 
-    def test_admin_kyc_review_flow(self):
+    def test_admin_kyc_review_flow(self, monkeypatch):
+        class FakeStorageBucket:
+            def upload(self, **_kwargs):
+                return {}
+
+            def create_signed_url(self, *_args):
+                return {"signedURL": "https://storage.example.test/document"}
+
+        class FakeStorage:
+            def from_(self, _bucket):
+                return FakeStorageBucket()
+
+        class FakeSupabase:
+            storage = FakeStorage()
+
+        monkeypatch.setattr(kyc_api, "_get_supabase_client", FakeSupabase)
+
         reg = _register_citizen()
         token = _login(reg["email"])["access_token"]
 
@@ -211,6 +228,15 @@ class TestAdmin:
         )
         assert signed_res.status_code == 200, signed_res.text
         assert signed_res.json()["document_id"] == doc_id
+
+        monkeypatch.setattr(kyc_api, "_get_supabase_client", lambda: None)
+        unavailable_res = client.post(
+            "/api/v1/kyc/documents",
+            data={"document_type": "AADHAAR"},
+            files={"file": ("aadhaar.pdf", file_bytes, "application/pdf")},
+            headers=_auth_headers(token),
+        )
+        assert unavailable_res.status_code == 503
 
     def test_admin_audit_and_limits(self):
         # Query audit logs
