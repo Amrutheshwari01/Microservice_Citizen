@@ -49,6 +49,29 @@ services:
     networks:
       - agrilink-net
 
+  cis-frontend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    image: ${CIS_FRONTEND_IMAGE:-agrilink-cis-frontend:latest}
+    container_name: agrilink-cis-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - cis-api
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - agrilink-net
+
 networks:
   agrilink-net:
     name: agrilink-network
@@ -64,5 +87,5 @@ volumes:
 #      docker compose up --build
 # 3. To run with hot-reload locally (without Docker):
 #      .venv311\Scripts\uvicorn app.main:app --reload --port 8000
-# 4. For production deployment to AWS ECS, reference .env values from
-#    AWS Secrets Manager or SSM Parameter Store – never bake secrets into images.
+# 4. Production EC2 deployment serves the frontend on port 80 and proxies API
+#    requests over the private Docker network. Keep secrets in backend/.env.

@@ -109,42 +109,32 @@ Set the same client ID as `VITE_GOOGLE_CLIENT_ID` in the frontend `.env` and
 backend and is available to existing citizen accounts with the same verified
 email address. New citizens should register first.
 
-### Public GitHub Pages and API configuration
+### AWS EC2 deployment
 
-The public frontend is served from
-`https://amrutheshwari01.github.io/Microservice_Citizen/`. GitHub Pages hosts
-static files only; real sign-in and account data require the FastAPI backend and
-a database reachable by that backend.
+The frontend and FastAPI backend deploy as separate Docker containers on the
+same existing EC2 instance. The frontend is served on port 80; its Nginx config
+forwards `/api/` requests to the API container over the private Docker network.
+The browser uses the same-origin `/api/v1` URL, so no public API URL or
+GitHub Pages configuration is required. The database remains external to these
+containers and continues to use the `DATABASE_URL` configured in
+`backend/.env`; deployment does not replace that connection.
 
-Before deploying a frontend change to `main`, add these repository **Actions
-variables** under **Settings → Secrets and variables → Actions → Variables**:
+Pushes to `main` build the frontend image on EC2 and deploy it alongside the
+API. The EC2 instance must have Docker Compose, the checked-out repository, and
+its existing `backend/.env`. Configure `GOOGLE_CLIENT_ID` there if Google
+sign-in is enabled. GitHub Actions also needs the `EC2_HOST`, `EC2_USER`, and
+`EC2_SSH_KEY` repository secrets. Allow inbound TCP port 80 in the instance's
+security group to serve the site. HTTPS requires a domain and TLS termination;
+do not use plain HTTP for production credentials.
 
-- `VITE_API_BASE_URL`: the public HTTPS API base URL, ending in `/api/v1`
-  (for example, `https://api.your-domain.example/api/v1`).
-- `VITE_GOOGLE_CLIENT_ID`: the Google OAuth web client ID, if Google sign-in is
-  enabled.
+On EC2, inspect the running containers and images with:
 
-When `VITE_API_BASE_URL` is missing, CI still validates the frontend and Docker
-images but skips GitHub Pages deployment rather than publishing a frontend that
-points at `localhost`. The AWS backend deployment remains independent and runs
-on pushes to `main` when the required EC2 secrets are configured. A malformed
-non-empty API URL fails validation. Once the public HTTPS API URL is configured,
-pushes to `main` also deploy the frontend automatically to the same Pages URL.
+```bash
+cd ~/Microservice_Citizen/backend
+docker compose ps
+docker images agrilink-cis agrilink-cis-frontend
+```
 
-On the API host, configure the backend runtime environment separately:
-
-- `DATABASE_URL` must point to a managed PostgreSQL database reachable from the
-  API host. The loopback URL in `backend/.env.example` is only for local
-  development and will not work from a cloud server. The app database
-  connection is intentionally not changed by this deployment setup.
-- Set `CORS_ORIGINS` to a JSON list containing
-  `https://amrutheshwari01.github.io` (the origin has no repository path).
-- Configure strong `JWT_SECRET_KEY` and `INTERNAL_SERVICE_SECRET` values, and
-  set `GOOGLE_CLIENT_ID` to the same client ID as the frontend variable.
-
-The existing backend deployment job also needs the `EC2_HOST`, `EC2_USER`, and
-`EC2_SSH_KEY` repository Actions secrets. Its EC2 instance must already have
-Docker, a checked-out repository, and a production `backend/.env` configured.
 Never commit or paste database URLs, private keys, or application secrets into
 this repository.
 
@@ -157,19 +147,23 @@ client funds or sensitive identity documents.
 ### Frontend Docker Image
 
 The root `Dockerfile` builds the frontend as a separate static Nginx image; it
-does not include or replace the backend image.
+does not include or replace the backend image. On EC2, Compose builds it with
+`/api/v1` as the API base URL and serves it on port 80.
 
 ```bash
-docker build --build-arg VITE_API_BASE_URL=https://api.example.com/api/v1 --build-arg VITE_GOOGLE_CLIENT_ID=your-google-client-id -t agrilink-citizen-frontend:latest .
-docker run --rm -p 8080:80 agrilink-citizen-frontend:latest
+cd backend
+docker compose build cis-frontend
+docker compose up -d cis-frontend
 ```
 
-The API URL must be reachable from the user's browser. Set the Google client's
-authorized JavaScript origin to the deployed frontend origin.
+The API is reached through the frontend's same-origin `/api/` proxy. If Google
+sign-in is enabled, set the Google client's authorized JavaScript origin to the
+deployed frontend origin; Google sign-in requires HTTPS for a public deployment.
 
-GitHub Actions builds this frontend image for validation but does not publish it
-to a container registry. GitHub Pages deploys the static `dist/` artifact
-instead. The backend image is built separately from `backend/Dockerfile`.
+GitHub Actions validates both images, then the AWS deployment job builds and
+runs them on the existing EC2 instance. No container registry or GitHub Pages
+deployment is involved. The backend image is built separately from
+`backend/Dockerfile`.
 
 ### Database Operations
 

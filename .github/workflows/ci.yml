@@ -13,10 +13,7 @@ jobs:
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
-    outputs:
-      pages_api_configured: ${{ steps.api_config.outputs.configured }}
     env:
-      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
       VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
     steps:
       - name: Checkout repository
@@ -31,32 +28,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check public API URL configuration
-        id: api_config
-        run: |
-          case "${VITE_API_BASE_URL:-}" in
-            https://*/api/v1|https://*/api/v1/)
-              echo "configured=true" >> "$GITHUB_OUTPUT"
-              ;;
-            "")
-              echo "configured=false" >> "$GITHUB_OUTPUT"
-              echo "::warning::GitHub Pages deployment is skipped until VITE_API_BASE_URL is configured."
-              echo "Set the repository Actions variable VITE_API_BASE_URL to the public HTTPS API URL ending in /api/v1." >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              echo "::error::Set the VITE_API_BASE_URL Actions variable to your public HTTPS API base URL ending in /api/v1."
-              exit 1
-              ;;
-          esac
-
       - name: Build frontend
-        run: npm run build -- --base=/Microservice_Citizen/
-
-      - name: Upload GitHub Pages artifact
-        if: steps.api_config.outputs.configured == 'true'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./dist
+        run: npm run build
 
   test:
     name: Lint, Type-check & Test
@@ -140,31 +113,8 @@ jobs:
           push: false
           tags: agrilink-citizen-frontend:${{ github.sha }}
           build-args: |
-            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_API_BASE_URL=/api/v1
             VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
-
-  pages:
-    name: Deploy frontend to GitHub Pages
-    runs-on: ubuntu-latest
-    needs: [frontend, test, docker-build]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.frontend.outputs.pages_api_configured == 'true'
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Deploy frontend
-        id: deployment
-        uses: actions/deploy-pages@v4
 
   deploy:
     name: Deploy to AWS EC2
@@ -210,7 +160,9 @@ jobs:
 
             PREVIOUS_SHA="$(cat /tmp/cis_previous_commit)"
             ROLLBACK_IMAGE="agrilink-cis:${PREVIOUS_SHA}"
+            ROLLBACK_FRONTEND_IMAGE="agrilink-cis-frontend:${PREVIOUS_SHA}"
             export ROLLBACK_IMAGE
+            export ROLLBACK_FRONTEND_IMAGE
             sh ./scripts/deploy.sh "$(git rev-parse HEAD)"
 
             echo "AWS DEPLOYMENT SUCCESSFUL"
