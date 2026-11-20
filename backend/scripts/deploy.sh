@@ -7,6 +7,11 @@ SHA="${1:-$(git -C .. rev-parse HEAD)}"
 IMAGE="agrilink-cis:${SHA}"
 FRONTEND_IMAGE="agrilink-cis-frontend:${SHA}"
 
+if [ -z "${DATABASE_URL:-}" ]; then
+    DATABASE_URL="$(docker exec agrilink-cis-api printenv DATABASE_URL)"
+    export DATABASE_URL
+fi
+
 echo "Backing up database before deployment..."
 BACKUP_FILE="$(sh ./scripts/db_backup.sh)"
 echo "Backup created: $BACKUP_FILE"
