@@ -182,33 +182,34 @@ async def upload_kyc_document(
 
     # ── Upload to Supabase Storage ─────────────────────────────────────────────
     sb = _get_supabase_client()
-    if sb:
-        try:
-            sb.storage.from_(settings.SUPABASE_STORAGE_BUCKET_KYC).upload(
-                path=storage_key,
-                file=content,
-                file_options={
-                    "content-type": file.content_type,
-                    "upsert": "false",  # never overwrite an existing key
-                },
-            )
-            logger.info(
-                "KYC document uploaded: citizen=%s type=%s key=%s",
-                citizen.id,
-                document_type,
-                storage_key,
-            )
-        except Exception as exc:
-            logger.error("Supabase Storage upload failed: %s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Document storage upload failed: {exc}",
-            )
-    else:
-        logger.warning(
-            "Supabase Storage not configured — metadata saved, file NOT uploaded. "
-            "storage_key=%s",
+    if not sb:
+        logger.error(
+            "KYC document upload rejected because private storage is unavailable."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Private document storage is not configured. Please contact support.",
+        )
+    try:
+        sb.storage.from_(settings.SUPABASE_STORAGE_BUCKET_KYC).upload(
+            path=storage_key,
+            file=content,
+            file_options={
+                "content-type": file.content_type,
+                "upsert": "false",  # never overwrite an existing key
+            },
+        )
+        logger.info(
+            "KYC document uploaded: citizen=%s type=%s key=%s",
+            citizen.id,
+            document_type,
             storage_key,
+        )
+    except Exception as exc:
+        logger.error("Supabase Storage upload failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Document storage upload failed: {exc}",
         )
 
     # ── Tokenise document number ──────────────────────────────────────────────

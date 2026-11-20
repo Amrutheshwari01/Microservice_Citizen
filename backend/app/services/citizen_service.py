@@ -299,6 +299,7 @@ class KycService:
                 "expires_at": None,
                 "review_reason_code": None,
                 "documents_count": 0,
+                "documents": [],
             }
         docs = self.repo.get_documents_for_record(record.id)
         return {
@@ -312,6 +313,15 @@ class KycService:
             "expires_at": record.expires_at.isoformat() if record.expires_at else None,
             "review_reason_code": record.review_reason_code,
             "documents_count": len(docs),
+            "documents": [
+                {
+                    "document_id": str(doc.id),
+                    "document_type": doc.document_type,
+                    "verification_status": doc.verification_status,
+                    "uploaded_at": doc.uploaded_at.isoformat(),
+                }
+                for doc in sorted(docs, key=lambda item: item.uploaded_at, reverse=True)
+            ],
         }
 
     def upload_document(

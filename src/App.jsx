@@ -524,39 +524,6 @@ export default function App() {
     );
   };
 
-  // KYC Tier Upgrade (CID-FR-06 & CID-FR-07)
-  const handleUpgradeKycTier = (newTier, maskedRef, docType) => {
-    setCitizen(prev => ({
-      ...prev,
-      kyc_tier: newTier,
-      kyc_status: 'VERIFIED',
-      kyc_details: {
-        ...prev.kyc_details,
-        verified_at: new Date().toISOString(),
-        provider: `${docType} Government Adapter (UIDAI/NSDL)`
-      }
-    }));
-
-    const newHistory = {
-      id: `HIST-${Date.now().toString().slice(-4)}`,
-      changed_field: "KYC Tier Level",
-      old_value: citizen.kyc_tier,
-      new_value: newTier,
-      changed_by: "KYC_PROVIDER_ADAPTER",
-      timestamp: new Date().toISOString(),
-      ip_address: "INTERNAL_BULKHEAD"
-    };
-    setProfileHistory(prev => [newHistory, ...prev]);
-
-    recordEvent(
-      "KYCTierChanged",
-      "KYC-PROV-UPGRADE",
-      { citizen_id: citizen.citizen_id, old_tier: citizen.kyc_tier, new_tier: newTier },
-      `Promoted citizen to ${newTier} following document tokenization`,
-      "Profile & KYC"
-    );
-  };
-
   // Switch Persona (CID-FR-09)
   const handleSwitchPersona = (newPersona) => {
     setCitizen(prev => ({ ...prev, active_persona: newPersona }));
@@ -873,7 +840,6 @@ export default function App() {
                 citizen={citizen}
                 profileHistory={profileHistory}
                 onUpdateProfile={handleUpdateProfile}
-                onUpgradeKycTier={handleUpgradeKycTier}
               />
             )}
 

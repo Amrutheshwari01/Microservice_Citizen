@@ -1,31 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   User, 
   ShieldCheck, 
-  FileCheck, 
   Upload, 
   History, 
-  Sparkles, 
   CheckCircle2, 
   AlertCircle, 
   Edit3, 
-  Save, 
-  X,
-  CreditCard,
-  Building,
-  Lock,
-  Camera,
-  FileText
+  Camera
 } from 'lucide-react';
 import { KYC_TIERS_INFO } from '../../data/mockData';
 import { INDIAN_PATTERNS } from '../../utils/validators';
-import confetti from 'canvas-confetti';
+import { kycService } from '../../services/kycService';
 
 export default function ProfileKycView({
   citizen,
   profileHistory,
-  onUpdateProfile,
-  onUpgradeKycTier
+  onUpdateProfile
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -39,10 +30,12 @@ export default function ProfileKycView({
   });
 
   // KYC Submission state
-  const [kycDocType, setKycDocType] = useState('PAN'); // PAN, AADHAAR, PASSPORT, DRIVING_LICENCE, GST_CERTIFICATE, FARMER_CERTIFICATE
+  const [kycDocType, setKycDocType] = useState('PAN');
   const [isVerifying, setIsVerifying] = useState(false);
   const [kycSuccessMsg, setKycSuccessMsg] = useState(null);
   const [kycErrorMsg, setKycErrorMsg] = useState(null);
+  const [kycStatus, setKycStatus] = useState(null);
+  const [isLoadingKyc, setIsLoadingKyc] = useState(true);
 
   // Document-specific typed form states
   const [panForm, setPanForm] = useState({
@@ -96,7 +89,28 @@ export default function ProfileKycView({
 
   const [uploadedFiles, setUploadedFiles] = useState({});
 
-  const tierInfo = KYC_TIERS_INFO[citizen.kyc_tier] || KYC_TIERS_INFO.T0;
+  const currentKycTier = kycStatus?.kyc_tier || citizen.kyc_tier || 'T0';
+  const tierInfo = KYC_TIERS_INFO[currentKycTier] || KYC_TIERS_INFO.T0;
+
+  useEffect(() => {
+    let isCurrent = true;
+    kycService.getKycStatus()
+      .then((response) => {
+        if (isCurrent) setKycStatus(response?.data || null);
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setKycErrorMsg(`Could not load KYC status: ${error.message}`);
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingKyc(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
@@ -111,19 +125,20 @@ export default function ProfileKycView({
     }));
   };
 
-  const handleKycSubmit = (e) => {
+  const handleKycSubmit = async (e) => {
     e.preventDefault();
     setKycErrorMsg(null);
+    setKycSuccessMsg(null);
 
-    let docNumberMasked = 'XXXX-9912';
+    let documentNumber;
 
-        if (kycDocType === 'PAN') {
+    if (kycDocType === 'PAN') {
       const panClean = panForm.pan_number.trim().toUpperCase();
       if (!INDIAN_PATTERNS.PAN.test(panClean)) {
         setKycErrorMsg('Invalid Indian PAN format. Must be 10 characters: 5 letters, 4 numbers, 1 letter (e.g. ABCDE1234F).');
         return;
       }
-      docNumberMasked = `${panClean.slice(0, 2)}••••••${panClean.slice(-2)}`;
+      documentNumber = panClean;
     } else if (kycDocType === 'AADHAAR') {
       const aadhClean = aadhaarForm.aadhaar_last4.trim();
       if (!INDIAN_PATTERNS.AADHAAR_LAST4.test(aadhClean)) {
@@ -134,59 +149,73 @@ export default function ProfileKycView({
         setKycErrorMsg('UIDAI Consent required: You must consent to Aadhaar-based KYC verification.');
         return;
       }
-      docNumberMasked = `•••• •••• ${aadhClean}`;
+      documentNumber = aadhClean;
     } else if (kycDocType === 'VOTER_ID') {
       const epicClean = voterForm.epic_number.trim().toUpperCase();
       if (!INDIAN_PATTERNS.VOTER_ID.test(epicClean)) {
         setKycErrorMsg('Invalid Voter ID (EPIC) format. Must be 3 letters followed by 7 digits (e.g. KLR1234567).');
         return;
       }
-      docNumberMasked = `${epicClean.slice(0, 3)}••••${epicClean.slice(-3)}`;
+      documentNumber = epicClean;
     } else if (kycDocType === 'PASSPORT') {
       const passClean = passportForm.passport_number.trim().toUpperCase();
       if (!INDIAN_PATTERNS.PASSPORT.test(passClean)) {
         setKycErrorMsg('Invalid Indian Passport format. Must start with 1 letter followed by 7 digits (e.g. A1234567).');
         return;
       }
-      docNumberMasked = `${passClean.slice(0, 1)}••••••${passClean.slice(-1)}`;
+      documentNumber = passClean;
     } else if (kycDocType === 'DRIVING_LICENCE') {
       const dlClean = dlForm.licence_number.trim().toUpperCase().replace(/[-\s]/g, '');
       if (dlClean.length < 15) {
         setKycErrorMsg('Invalid Driving Licence format. Expected State code, RTO code, year and registration digits (e.g. KA0120200012345).');
         return;
       }
-      docNumberMasked = `DL-${dlClean.slice(0, 4)}••••${dlClean.slice(-4)}`;
+      documentNumber = dlClean;
     } else if (kycDocType === 'GST_CERTIFICATE') {
       const gstClean = gstForm.gstin.trim().toUpperCase();
       if (!INDIAN_PATTERNS.GSTIN.test(gstClean)) {
         setKycErrorMsg('Invalid GSTIN format. Expected 15 characters: 2 state digits, 10 PAN chars, 1 entity, Z, 1 checksum (e.g. 29ABCDE1234F1Z5).');
         return;
       }
-      docNumberMasked = `${gstClean.slice(0, 2)}••••••••••${gstClean.slice(-3)}`; } else if (kycDocType === 'FARMER_CERTIFICATE') {
+      documentNumber = gstClean;
+    } else if (kycDocType === 'FARMER_REGISTRATION') {
       if (!farmerForm.survey_number.trim()) {
         setKycErrorMsg('Please enter the agricultural Land Survey or Farmer ID number.');
         return;
       }
-      docNumberMasked = `FRM-SURV-${farmerForm.survey_number}`;
+      documentNumber = farmerForm.survey_number.trim();
+    }
+
+    const file = uploadedFiles.doc_file;
+    if (!file) {
+      setKycErrorMsg('Choose a document file before submitting.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+      setKycErrorMsg('Choose a PDF, JPG, or PNG document.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setKycErrorMsg('The selected file is larger than 5 MB.');
+      return;
     }
 
     setIsVerifying(true);
-    setTimeout(() => {
-      setIsVerifying(false);
-      const nextTier = citizen.kyc_tier === 'T0' ? 'T1' : 'T2';
-      onUpgradeKycTier(nextTier, docNumberMasked, kycDocType);
-
+    try {
+      const uploadResponse = await kycService.uploadDocument(kycDocType, file, documentNumber);
+      setKycSuccessMsg(uploadResponse?.message || 'Document submitted for review.');
+      setUploadedFiles(prev => ({ ...prev, doc_file: null }));
       try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-      } catch (err) {}
-
-      setKycSuccessMsg(`Document (${kycDocType.replace('_', ' ')}) submitted and verified successfully! Account upgraded to ${nextTier} Tier with elevated limits.`);
-      setTimeout(() => setKycSuccessMsg(null), 6000);
-    }, 1200);
+        const statusResponse = await kycService.getKycStatus();
+        setKycStatus(statusResponse?.data || null);
+      } catch (error) {
+        setKycErrorMsg(`Document submitted, but status could not be refreshed: ${error.message}`);
+      }
+    } catch (error) {
+      setKycErrorMsg(error.message || 'Document submission failed. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   return (
@@ -195,7 +224,7 @@ export default function ProfileKycView({
         <div>
           <h2>Citizen Identity, Profile & KYC Verification</h2>
           <p className="text-muted">
-            Verified Personal Identity, Audit History & Tier Entitlements
+            Profile details, submitted documents, and KYC review status
           </p>
         </div>
       </div>
@@ -206,6 +235,12 @@ export default function ProfileKycView({
           <span>{kycSuccessMsg}</span>
         </div>
       )}
+      {kycErrorMsg && (
+        <div className="alert-callout danger" style={{ marginBottom: '20px' }}>
+          <AlertCircle size={20} />
+          <span>{kycErrorMsg}</span>
+        </div>
+      )}
 
       {/* KYC Tier Overview & Entitlements Banner */}
       <div className="card" style={{ marginBottom: '24px', borderLeft: `6px solid ${tierInfo.color}`, padding: '24px' }}>
@@ -213,9 +248,9 @@ export default function ProfileKycView({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <span className="badge" style={{ backgroundColor: tierInfo.color, color: 'white' }}>
-                Active KYC Tier: {citizen.kyc_tier}
+                Active KYC Tier: {currentKycTier}
               </span>
-              <span className="badge badge-green">Verified Claim in Token</span>
+              <span className="badge badge-gray">{kycStatus?.status || 'Not Submitted'}</span>
             </div>
             <h3 style={{ fontSize: '1.3rem', margin: '4px 0' }}>{tierInfo.name}</h3>
             <p className="text-muted" style={{ fontSize: '0.85rem' }}>{tierInfo.description}</p>
@@ -225,7 +260,9 @@ export default function ProfileKycView({
             <span className="text-muted" style={{ fontSize: '0.8rem' }}>Citizen Identifier</span>
             <div className="font-mono text-bold" style={{ fontSize: '1.1rem' }}>{citizen.citizen_id}</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
-              Verified via: {citizen.kyc_details?.provider || 'Platform Verification Rail'}
+              {kycStatus?.submitted_at
+                ? `Submitted: ${new Date(kycStatus.submitted_at).toLocaleDateString()}`
+                : 'No KYC submission yet'}
             </div>
           </div>
         </div>
@@ -233,7 +270,7 @@ export default function ProfileKycView({
         {/* Comparison Grid */}
         <div className="grid-3" style={{ background: 'var(--slate-50)', padding: '16px', borderRadius: '12px' }}>
           {Object.entries(KYC_TIERS_INFO).map(([tierKey, info]) => {
-            const isCurrent = citizen.kyc_tier === tierKey;
+            const isCurrent = currentKycTier === tierKey;
             return (
               <div 
                 key={tierKey} 
@@ -410,30 +447,21 @@ export default function ProfileKycView({
 
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '2px dashed var(--slate-200)' }}>
                   <h4 style={{ fontSize: '0.82rem', textTransform: 'uppercase', color: 'var(--slate-500)', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                    Verified Identity Documents
+                    Submitted KYC Documents
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="text-muted">Aadhaar (UIDAI):</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span className="font-mono">{citizen.kyc_details?.aadhaar_masked || 'XXXX-XXXX-8921'}</span>
-                        <span className="badge badge-green" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>Verified</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="text-muted">PAN Card (ITD):</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span className="font-mono">{citizen.kyc_details?.pan_masked || 'ABCDE****F'}</span>
-                        <span className="badge badge-green" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>Verified</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="text-muted">Voter ID (EPIC):</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span className="font-mono">{citizen.kyc_details?.voter_id_masked || 'KLR••••391'}</span>
-                        <span className="badge badge-green" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>Verified</span>
-                      </div>
-                    </div>
+                    {isLoadingKyc ? (
+                      <span className="text-muted">Loading saved documents...</span>
+                    ) : kycStatus?.documents?.length ? (
+                      kycStatus.documents.map((doc) => (
+                        <div key={doc.document_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{doc.document_type.replaceAll('_', ' ')}</span>
+                          <span className="badge badge-gray">{doc.verification_status}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-muted">No documents submitted yet.</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -453,13 +481,6 @@ export default function ProfileKycView({
             </div>
 
             <div className="card-body">
-              {kycErrorMsg && (
-                <div className="alert-callout danger" style={{ marginBottom: '16px' }}>
-                  <AlertCircle size={16} />
-                  <span>{kycErrorMsg}</span>
-                </div>
-              )}
-
               <form onSubmit={handleKycSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
                   <label className="form-label">Select Document Category *</label>
@@ -477,7 +498,7 @@ export default function ProfileKycView({
                     <option value="PASSPORT">Passport (International Identity)</option>
                     <option value="DRIVING_LICENCE">Driving Licence (Transport Authority)</option>
                     <option value="GST_CERTIFICATE">GST Registration Certificate (Business / FPO)</option>
-                    <option value="FARMER_CERTIFICATE">Farmer Registration / Land Records (RTC / Patta)</option>
+                    <option value="FARMER_REGISTRATION">Farmer Registration / Land Records (RTC / Patta)</option>
                   </select>
                 </div>
 
@@ -713,7 +734,7 @@ export default function ProfileKycView({
                 )}
 
                 {/* 6. Farmer Certificate Form */}
-                {kycDocType === 'FARMER_CERTIFICATE' && (
+                {kycDocType === 'FARMER_REGISTRATION' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', background: 'var(--slate-50)', padding: '16px', borderRadius: '8px' }}>
                     <div>
                       <label className="form-label">Survey No. / Farmer ID (FID) *</label>
@@ -778,7 +799,7 @@ export default function ProfileKycView({
                     <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                       {uploadedFiles['doc_file'] ? uploadedFiles['doc_file'].name : `Click to choose ${kycDocType.replace('_', ' ')} file`}
                     </div>
-                    <small className="text-muted">Files stored in encrypted private storage; accessible only via time-limited signed URLs.</small>
+                    <small className="text-muted">Your document number is not stored in plain text. Maximum file size: 5 MB.</small>
                   </div>
                 </div>
 
@@ -788,7 +809,7 @@ export default function ProfileKycView({
                   disabled={isVerifying}
                   style={{ marginTop: '8px' }}
                 >
-                  {isVerifying ? 'Verifying with Official Verification Rail...' : `Submit Document & Upgrade to ${citizen.kyc_tier === 'T0' ? 'T1' : 'T2'} Tier`}
+                  {isVerifying ? 'Submitting...' : 'Submit for KYC Review'}
                 </button>
               </form>
             </div>

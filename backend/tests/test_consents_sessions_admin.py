@@ -157,6 +157,13 @@ class TestAdmin:
         reg = _register_citizen()
         token = _login(reg["email"])["access_token"]
 
+        initial_status_res = client.get(
+            "/api/v1/kyc/me",
+            headers=_auth_headers(token),
+        )
+        assert initial_status_res.status_code == 200, initial_status_res.text
+        assert initial_status_res.json()["data"]["documents"] == []
+
         # Upload a dummy KYC document to create a KYC record
         file_bytes = b"%PDF-1.4 dummy test document content"
         upload_res = client.post(
@@ -168,6 +175,20 @@ class TestAdmin:
         assert upload_res.status_code == 201, upload_res.text
         kyc_record_id = upload_res.json()["kyc_record_id"]
         doc_id = upload_res.json()["document_id"]
+
+        status_res = client.get("/api/v1/kyc/me", headers=_auth_headers(token))
+        assert status_res.status_code == 200, status_res.text
+        kyc_status = status_res.json()["data"]
+        assert kyc_status["status"] == "IN_REVIEW"
+        assert kyc_status["documents_count"] == 1
+        assert len(kyc_status["documents"]) == 1
+        document = kyc_status["documents"][0]
+        assert document["document_id"] == doc_id
+        assert document["document_type"] == "AADHAAR"
+        assert document["verification_status"] == "PENDING"
+        assert document["uploaded_at"]
+        assert "document_number_token" not in document
+        assert "storage_object_key" not in document
 
         # Admin reviews KYC record
         review_res = client.post(
