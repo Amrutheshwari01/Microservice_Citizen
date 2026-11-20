@@ -1,4 +1,4 @@
-"""Integration tests for Consents, Sessions, Admin, KYC uploads, and Avatar.
+"""Integration tests for Consents, Sessions, Admin, KYC details, and Avatar.
 
 Runs against the live Supabase PostgreSQL database.
 """
@@ -7,7 +7,6 @@ import uuid
 import secrets
 from fastapi.testclient import TestClient
 
-from app.api.v1 import kyc as kyc_api
 from app.main import app
 from app.core.config import settings
 
@@ -154,23 +153,7 @@ class TestAdmin:
         farmer_p = [p for p in personas_res.json()["data"] if p["id"] == persona_id][0]
         assert farmer_p["status"] == "ACTIVE"
 
-    def test_admin_kyc_review_flow(self, monkeypatch):
-        class FakeStorageBucket:
-            def upload(self, **_kwargs):
-                return {}
-
-            def create_signed_url(self, *_args):
-                return {"signedURL": "https://storage.example.test/document"}
-
-        class FakeStorage:
-            def from_(self, _bucket):
-                return FakeStorageBucket()
-
-        class FakeSupabase:
-            storage = FakeStorage()
-
-        monkeypatch.setattr(kyc_api, "_get_supabase_client", FakeSupabase)
-
+    def test_admin_kyc_review_flow(self):
         reg = _register_citizen()
         token = _login(reg["email"])["access_token"]
 
@@ -181,18 +164,21 @@ class TestAdmin:
         assert initial_status_res.status_code == 200, initial_status_res.text
         assert initial_status_res.json()["data"]["documents"] == []
 
-        # Upload a dummy KYC document to create a KYC record
-        file_bytes = b"%PDF-1.4 dummy test document content"
-        upload_res = client.post(
+        # Submit document details only; no file is uploaded or stored.
+        submit_res = client.post(
             "/api/v1/kyc/documents",
-            data={"document_type": "AADHAAR", "document_number": "223456789012"},
-            files={"file": ("aadhaar.pdf", file_bytes, "application/pdf")},
+            json={
+                "document_type": "PAN",
+                "document_number": "ABCDE1234F",
+                "details": {"name_on_pan": "Test Citizen"},
+            },
             headers=_auth_headers(token),
         )
-        assert upload_res.status_code == 201, upload_res.text
-        kyc_record_id = upload_res.json()["kyc_record_id"]
-        doc_id = upload_res.json()["document_id"]
+        assert submit_res.status_code == 201, submit_res.text
+        kyc_record_id = submit_res.json()["kyc_record_id"]
+        doc_id = submit_res.json()["document_id"]
 
+        token = _login(reg["email"])["access_token"]
         status_res = client.get("/api/v1/kyc/me", headers=_auth_headers(token))
         assert status_res.status_code == 200, status_res.text
         kyc_status = status_res.json()["data"]
@@ -201,11 +187,27 @@ class TestAdmin:
         assert len(kyc_status["documents"]) == 1
         document = kyc_status["documents"][0]
         assert document["document_id"] == doc_id
-        assert document["document_type"] == "AADHAAR"
+        assert document["document_type"] == "PAN"
+        assert document["document_number_masked"] == "AB******4F"
+        assert document["details"] == {"name_on_pan": "Test Citizen"}
         assert document["verification_status"] == "PENDING"
         assert document["uploaded_at"]
         assert "document_number_token" not in document
         assert "storage_object_key" not in document
+
+        invalid_details_res = client.post(
+            "/api/v1/kyc/documents",
+            json={
+                "document_type": "PAN",
+                "document_number": "ABCDE1234F",
+                "details": {
+                    "name_on_pan": "Test Citizen",
+                    "pan_number": "ABCDE1234F",
+                },
+            },
+            headers=_auth_headers(token),
+        )
+        assert invalid_details_res.status_code == 400
 
         # Admin reviews KYC record
         review_res = client.post(
@@ -221,22 +223,12 @@ class TestAdmin:
         assert review_res.json()["status"] == "VERIFIED"
         assert review_res.json()["kyc_tier"] == "T1"
 
-        # Check signed URL endpoint works
+        # Details-only submissions do not have a signed file URL.
         signed_res = client.get(
             f"/api/v1/kyc/documents/{doc_id}/signed-url",
             headers=_auth_headers(token),
         )
-        assert signed_res.status_code == 200, signed_res.text
-        assert signed_res.json()["document_id"] == doc_id
-
-        monkeypatch.setattr(kyc_api, "_get_supabase_client", lambda: None)
-        unavailable_res = client.post(
-            "/api/v1/kyc/documents",
-            data={"document_type": "AADHAAR"},
-            files={"file": ("aadhaar.pdf", file_bytes, "application/pdf")},
-            headers=_auth_headers(token),
-        )
-        assert unavailable_res.status_code == 503
+        assert signed_res.status_code == 404
 
     def test_admin_audit_and_limits(self):
         # Query audit logs

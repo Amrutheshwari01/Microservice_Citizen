@@ -12,16 +12,14 @@ export const kycService = {
   },
 
   /**
-   * Upload private KYC document
+   * Save customer-entered KYC document details without uploading a file
    */
-  async uploadDocument(documentType, file, documentNumber = null) {
-    const formData = new FormData();
-    formData.append('document_type', documentType);
-    formData.append('file', file);
-    if (documentNumber) {
-      formData.append('document_number', documentNumber);
-    }
-    return apiClient.post('/kyc/documents', formData);
+  async submitDocument(documentType, documentNumber, details) {
+    return apiClient.post('/kyc/documents', {
+      document_type: documentType,
+      document_number: documentNumber,
+      details
+    });
   },
 
   /**

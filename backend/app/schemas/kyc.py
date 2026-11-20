@@ -1,11 +1,7 @@
-"""
-KYC and document schemas.
-Maps to: kyc_records + kyc_documents tables.
-Files stored in Supabase Storage; only metadata in PostgreSQL.
-"""
+"""KYC document-detail schemas."""
 
 import uuid
-from typing import Optional
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,14 +21,53 @@ ALLOWED_DOCUMENT_TYPES = {
     "OTHER",
 }
 
-ALLOWED_CONTENT_TYPES = {
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "application/pdf",
+KYC_DETAIL_FIELDS = {
+    "PAN": {"name_on_pan"},
+    "AADHAAR": {"name_on_aadhaar", "consent_granted"},
+    "PASSPORT": {"given_names", "expiry_date"},
+    "VOTER_ID": {"name_on_voter_id", "state", "assembly_constituency"},
+    "DRIVING_LICENCE": {"issuing_state_code", "vehicle_classes"},
+    "GST_CERTIFICATE": {"legal_business_name"},
+    "FARMER_REGISTRATION": {"certificate_type", "land_area_acres", "district"},
 }
 
-MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
+REQUIRED_KYC_DETAIL_FIELDS = {
+    "PAN": {"name_on_pan"},
+    "AADHAAR": {"name_on_aadhaar", "consent_granted"},
+    "VOTER_ID": {"name_on_voter_id", "state"},
+    "PASSPORT": {"given_names", "expiry_date"},
+    "GST_CERTIFICATE": {"legal_business_name"},
+}
+
+
+class KycDocumentSubmission(BaseModel):
+    document_type: str
+    document_number: Optional[str] = Field(default=None, max_length=100)
+    details: dict[str, Union[str, bool, None]] = Field(default_factory=dict)
+
+    @field_validator("document_type")
+    @classmethod
+    def validate_document_type(cls, value: str) -> str:
+        normalized = value.strip().upper()
+        if normalized not in ALLOWED_DOCUMENT_TYPES:
+            raise ValueError(f"Unsupported document type: {normalized}")
+        return normalized
+
+    @field_validator("document_number")
+    @classmethod
+    def normalize_document_number(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        return value.strip().upper()
+
+
+class KycDocumentStatusItem(BaseModel):
+    document_id: uuid.UUID
+    document_type: str
+    document_number_masked: Optional[str]
+    details: dict[str, Union[str, bool, None]]
+    verification_status: str
+    uploaded_at: str
 
 
 class KycStatusResponse(BaseModel):
@@ -44,6 +79,7 @@ class KycStatusResponse(BaseModel):
     expires_at: Optional[str]
     review_reason_code: Optional[str]
     documents_count: int
+    documents: List[KycDocumentStatusItem]
 
     model_config = {"from_attributes": True}
 
@@ -52,13 +88,11 @@ class KycDocumentResponse(BaseModel):
     id: uuid.UUID
     kyc_record_id: uuid.UUID
     document_type: str
-    original_filename: Optional[str]
-    content_type: str
-    file_size_bytes: int
+    document_number_masked: Optional[str]
+    details: dict[str, Union[str, bool, None]]
     verification_status: str
     uploaded_at: str
     verified_at: Optional[str]
-    # storage_object_key intentionally NOT returned to clients
 
     model_config = {"from_attributes": True}
 

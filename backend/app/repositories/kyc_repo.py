@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -45,10 +45,12 @@ class KycRepository:
         self,
         kyc_record_id: uuid.UUID,
         document_type: str,
-        storage_object_key: str,
-        content_type: str,
-        file_size_bytes: int,
+        document_number_masked: Optional[str],
+        details: Dict[str, Any],
+        storage_object_key: Optional[str] = None,
         original_filename: Optional[str] = None,
+        content_type: Optional[str] = None,
+        file_size_bytes: Optional[int] = None,
         document_number_token: Optional[str] = None,
     ) -> KycDocument:
         doc = KycDocument(
@@ -56,6 +58,8 @@ class KycRepository:
             kyc_record_id=kyc_record_id,
             document_type=document_type,
             document_number_token=document_number_token,
+            document_number_masked=document_number_masked,
+            details=details,
             storage_object_key=storage_object_key,
             original_filename=original_filename,
             content_type=content_type,

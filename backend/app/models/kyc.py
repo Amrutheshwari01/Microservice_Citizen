@@ -9,6 +9,7 @@ from sqlalchemy import (
     ForeignKey,
 )
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -69,10 +70,14 @@ class KycDocument(Base):
     )
     document_type: Mapped[str] = mapped_column(String(30), nullable=False)
     document_number_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    storage_object_key: Mapped[str] = mapped_column(Text, nullable=False)
+    document_number_masked: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )
+    details: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    storage_object_key: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     original_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    content_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    file_size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    content_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    file_size_bytes: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     verification_status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="PENDING"
     )

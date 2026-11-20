@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { 
   User, 
   ShieldCheck, 
-  Upload, 
   History, 
   CheckCircle2, 
   AlertCircle, 
@@ -87,8 +86,6 @@ export default function ProfileKycView({
     district: 'Bengaluru Rural'
   });
 
-  const [uploadedFiles, setUploadedFiles] = useState({});
-
   const currentKycTier = kycStatus?.kyc_tier || citizen.kyc_tier || 'T0';
   const tierInfo = KYC_TIERS_INFO[currentKycTier] || KYC_TIERS_INFO.T0;
 
@@ -118,19 +115,13 @@ export default function ProfileKycView({
     setIsEditing(false);
   };
 
-  const handleFileSelect = (slot, file) => {
-    setUploadedFiles(prev => ({
-      ...prev,
-      [slot]: file
-    }));
-  };
-
   const handleKycSubmit = async (e) => {
     e.preventDefault();
     setKycErrorMsg(null);
     setKycSuccessMsg(null);
 
     let documentNumber;
+    let details = {};
 
     if (kycDocType === 'PAN') {
       const panClean = panForm.pan_number.trim().toUpperCase();
@@ -139,6 +130,7 @@ export default function ProfileKycView({
         return;
       }
       documentNumber = panClean;
+      details = { name_on_pan: panForm.name_on_pan.trim() };
     } else if (kycDocType === 'AADHAAR') {
       const aadhClean = aadhaarForm.aadhaar_last4.trim();
       if (!INDIAN_PATTERNS.AADHAAR_LAST4.test(aadhClean)) {
@@ -150,6 +142,10 @@ export default function ProfileKycView({
         return;
       }
       documentNumber = aadhClean;
+      details = {
+        name_on_aadhaar: aadhaarForm.name_on_aadhaar.trim(),
+        consent_granted: aadhaarForm.consent_granted
+      };
     } else if (kycDocType === 'VOTER_ID') {
       const epicClean = voterForm.epic_number.trim().toUpperCase();
       if (!INDIAN_PATTERNS.VOTER_ID.test(epicClean)) {
@@ -157,6 +153,11 @@ export default function ProfileKycView({
         return;
       }
       documentNumber = epicClean;
+      details = {
+        name_on_voter_id: voterForm.name_on_voter_id.trim(),
+        state: voterForm.state.trim(),
+        assembly_constituency: voterForm.assembly_constituency.trim()
+      };
     } else if (kycDocType === 'PASSPORT') {
       const passClean = passportForm.passport_number.trim().toUpperCase();
       if (!INDIAN_PATTERNS.PASSPORT.test(passClean)) {
@@ -164,6 +165,10 @@ export default function ProfileKycView({
         return;
       }
       documentNumber = passClean;
+      details = {
+        given_names: passportForm.given_names.trim(),
+        expiry_date: passportForm.expiry_date
+      };
     } else if (kycDocType === 'DRIVING_LICENCE') {
       const dlClean = dlForm.licence_number.trim().toUpperCase().replace(/[-\s]/g, '');
       if (dlClean.length < 15) {
@@ -171,6 +176,10 @@ export default function ProfileKycView({
         return;
       }
       documentNumber = dlClean;
+      details = {
+        issuing_state_code: dlForm.issuing_state_code.trim(),
+        vehicle_classes: dlForm.vehicle_classes.trim()
+      };
     } else if (kycDocType === 'GST_CERTIFICATE') {
       const gstClean = gstForm.gstin.trim().toUpperCase();
       if (!INDIAN_PATTERNS.GSTIN.test(gstClean)) {
@@ -178,33 +187,28 @@ export default function ProfileKycView({
         return;
       }
       documentNumber = gstClean;
+      details = { legal_business_name: gstForm.legal_business_name.trim() };
     } else if (kycDocType === 'FARMER_REGISTRATION') {
       if (!farmerForm.survey_number.trim()) {
         setKycErrorMsg('Please enter the agricultural Land Survey or Farmer ID number.');
         return;
       }
       documentNumber = farmerForm.survey_number.trim();
-    }
-
-    const file = uploadedFiles.doc_file;
-    if (!file) {
-      setKycErrorMsg('Choose a document file before submitting.');
-      return;
-    }
-    if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
-      setKycErrorMsg('Choose a PDF, JPG, or PNG document.');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setKycErrorMsg('The selected file is larger than 5 MB.');
-      return;
+      details = {
+        certificate_type: farmerForm.certificate_type,
+        land_area_acres: farmerForm.land_area_acres,
+        district: farmerForm.district.trim()
+      };
     }
 
     setIsVerifying(true);
     try {
-      const uploadResponse = await kycService.uploadDocument(kycDocType, file, documentNumber);
+      const uploadResponse = await kycService.submitDocument(
+        kycDocType,
+        documentNumber,
+        details
+      );
       setKycSuccessMsg(uploadResponse?.message || 'Document submitted for review.');
-      setUploadedFiles(prev => ({ ...prev, doc_file: null }));
       try {
         const statusResponse = await kycService.getKycStatus();
         setKycStatus(statusResponse?.data || null);
@@ -447,16 +451,28 @@ export default function ProfileKycView({
 
                 <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '2px dashed var(--slate-200)' }}>
                   <h4 style={{ fontSize: '0.82rem', textTransform: 'uppercase', color: 'var(--slate-500)', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                    Submitted KYC Documents
+                    Saved Document Details
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
                     {isLoadingKyc ? (
                       <span className="text-muted">Loading saved documents...</span>
                     ) : kycStatus?.documents?.length ? (
                       kycStatus.documents.map((doc) => (
-                        <div key={doc.document_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{doc.document_type.replaceAll('_', ' ')}</span>
-                          <span className="badge badge-gray">{doc.verification_status}</span>
+                        <div key={doc.document_id} style={{ padding: '10px 0', borderBottom: '1px solid var(--slate-100)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong>{doc.document_type.replaceAll('_', ' ')}</strong>
+                            <span className="badge badge-gray">{doc.verification_status}</span>
+                          </div>
+                          {doc.document_number_masked && (
+                            <small className="text-muted">
+                              Number: <span className="font-mono">{doc.document_number_masked}</span>
+                            </small>
+                          )}
+                          {Object.entries(doc.details || {}).map(([field, value]) => (
+                            <small key={field} className="text-muted" style={{ display: 'block' }}>
+                              {field.replaceAll('_', ' ')}: {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
+                            </small>
+                          ))}
                         </div>
                       ))
                     ) : (
@@ -771,36 +787,8 @@ export default function ProfileKycView({
                   </div>
                 )}
 
-                {/* Document Scan Upload Slot */}
-                <div>
-                  <label className="form-label">Upload Document Scan / Photo (PDF, JPG, PNG - Max 5MB) *</label>
-                  <div 
-                    style={{
-                      border: '2px dashed var(--slate-300)',
-                      borderRadius: '8px',
-                      padding: '18px',
-                      textAlign: 'center',
-                      background: 'var(--slate-50)',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = '.pdf,.jpg,.jpeg,.png';
-                      input.onchange = (e) => {
-                        if (e.target.files[0]) {
-                          handleFileSelect('doc_file', e.target.files[0]);
-                        }
-                      };
-                      input.click();
-                    }}
-                  >
-                    <Upload size={22} className="text-muted" style={{ margin: '0 auto 6px' }} />
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                      {uploadedFiles['doc_file'] ? uploadedFiles['doc_file'].name : `Click to choose ${kycDocType.replace('_', ' ')} file`}
-                    </div>
-                    <small className="text-muted">Your document number is not stored in plain text. Maximum file size: 5 MB.</small>
-                  </div>
+                <div className="alert-callout info">
+                  <span>No photo or PDF is needed. Only the details entered above are saved. Document numbers are stored as secure tokens and shown masked.</span>
                 </div>
 
                 <button 
@@ -809,7 +797,7 @@ export default function ProfileKycView({
                   disabled={isVerifying}
                   style={{ marginTop: '8px' }}
                 >
-                  {isVerifying ? 'Submitting...' : 'Submit for KYC Review'}
+                  {isVerifying ? 'Saving...' : 'Save & Submit Details'}
                 </button>
               </form>
             </div>

@@ -25,8 +25,6 @@ from app.schemas.persona import (
 )
 from app.schemas.kyc import (
     ALLOWED_DOCUMENT_TYPES,
-    ALLOWED_CONTENT_TYPES,
-    MAX_FILE_SIZE_BYTES,
 )
 from app.schemas.wallet import (
     TransferRequest,
@@ -317,6 +315,8 @@ class KycService:
                 {
                     "document_id": str(doc.id),
                     "document_type": doc.document_type,
+                    "document_number_masked": doc.document_number_masked,
+                    "details": doc.details or {},
                     "verification_status": doc.verification_status,
                     "uploaded_at": doc.uploaded_at.isoformat(),
                 }
@@ -324,26 +324,18 @@ class KycService:
             ],
         }
 
-    def upload_document(
+    def submit_document(
         self,
         citizen: Citizen,
         document_type: str,
-        storage_object_key: str,
-        original_filename: str,
-        content_type: str,
-        file_size_bytes: int,
+        document_number: Optional[str],
+        details: Dict[str, Any],
         document_number_token: Optional[str] = None,
     ) -> Dict:
         if document_type.upper() not in ALLOWED_DOCUMENT_TYPES:
             raise BadRequestException(
                 f"Unsupported document type: {document_type}. Allowed: {sorted(ALLOWED_DOCUMENT_TYPES)}"
             )
-        if content_type.lower() not in ALLOWED_CONTENT_TYPES:
-            raise BadRequestException(
-                f"Unsupported file type: {content_type}. Allowed: JPEG, PNG, PDF"
-            )
-        if file_size_bytes > MAX_FILE_SIZE_BYTES:
-            raise BadRequestException("File exceeds maximum allowed size of 5 MB")
 
         # Get or create KYC record
         record = self.repo.get_latest_for_citizen(citizen.id)
@@ -357,10 +349,10 @@ class KycService:
         doc = self.repo.create_document(
             kyc_record_id=record.id,
             document_type=document_type.upper(),
-            storage_object_key=storage_object_key,
-            content_type=content_type,
-            file_size_bytes=file_size_bytes,
-            original_filename=original_filename,
+            document_number_masked=self._mask_document_number(
+                document_type, document_number
+            ),
+            details=details,
             document_number_token=document_number_token,
         )
 
@@ -373,13 +365,30 @@ class KycService:
 
         return {
             "success": True,
-            "message": "Document uploaded and submitted for review.",
+            "message": "Document details saved and submitted for review.",
             "document_id": str(doc.id),
             "kyc_record_id": str(record.id),
             "document_type": doc.document_type,
             "verification_status": doc.verification_status,
             "uploaded_at": doc.uploaded_at.isoformat(),
         }
+
+    @staticmethod
+    def _mask_document_number(
+        document_type: str, document_number: Optional[str]
+    ) -> Optional[str]:
+        if not document_number:
+            return None
+        if document_type.upper() == "AADHAAR":
+            last_four = document_number[-4:]
+            return (
+                f"•••• •••• {last_four}"
+                if len(document_number) > 4
+                else f"•••• {last_four}"
+            )
+        if len(document_number) <= 4:
+            return "*" * len(document_number)
+        return f"{document_number[:2]}{'*' * (len(document_number) - 4)}{document_number[-2:]}"
 
 
 # ── Wallet Service ─────────────────────────────────────────────────────────────

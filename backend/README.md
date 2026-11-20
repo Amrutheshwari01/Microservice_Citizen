@@ -253,7 +253,9 @@ backup and application image together when a migration is not reversible.
 - JWTs signed with `HS256`. Secret minimum 32 chars.
 - OTPs are **SHA-256 hashed** before storage. Never logged or returned in production.
 - Aadhaar / PAN numbers are **tokenized** (HMAC-SHA256). Plaintext never persisted.
-- KYC document files stored in **private Supabase Storage** buckets. URLs are signed and time-limited.
+- Customer-entered KYC details are stored in PostgreSQL; document numbers are shown only in masked form.
+- KYC submissions do not accept or store document images or PDFs.
+- Supabase Storage is used for profile avatars and legacy file-backed KYC records.
 - All financial arithmetic uses Python `Decimal` / PostgreSQL `NUMERIC(19,4)`.
 - Double-entry ledger with row-level locking (`SELECT ... FOR UPDATE`).
 - Idempotency keys prevent duplicate wallet operations.
@@ -270,7 +272,7 @@ See `.env.example` for the full list. Key variables:
 | `DATABASE_URL` | Supabase PostgreSQL connection string |
 | `JWT_SECRET_KEY` | JWT signing secret (min 32 chars) |
 | `INTERNAL_SERVICE_SECRET` | Pre-shared key for microservice-to-microservice auth |
-| `SUPABASE_URL` / `SUPABASE_KEY` | For Supabase Storage file uploads |
+| `SUPABASE_URL` / `SUPABASE_KEY` | For profile avatar and legacy KYC file storage |
 | `CORS_ORIGINS` | JSON array of allowed frontend origins |
 
 ---
