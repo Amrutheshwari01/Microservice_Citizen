@@ -12,6 +12,23 @@ import { KYC_TIERS_INFO } from '../../data/mockData';
 import { INDIAN_PATTERNS } from '../../utils/validators';
 import { kycService } from '../../services/kycService';
 
+const readPlanPreference = (citizenId) => {
+  try {
+    const savedPlan = window.localStorage.getItem(`agrilink_plan_preference:${citizenId}`);
+    return {
+      preferredPlan: savedPlan && Object.prototype.hasOwnProperty.call(KYC_TIERS_INFO, savedPlan)
+        ? savedPlan
+        : null,
+      error: null
+    };
+  } catch {
+    return {
+      preferredPlan: null,
+      error: 'Could not load your plan preference from this browser.'
+    };
+  }
+};
+
 export default function ProfileKycView({
   citizen,
   profileHistory,
@@ -88,6 +105,10 @@ export default function ProfileKycView({
 
   const currentKycTier = kycStatus?.kyc_tier || citizen.kyc_tier || 'T0';
   const tierInfo = KYC_TIERS_INFO[currentKycTier] || KYC_TIERS_INFO.T0;
+  const planPreferenceKey = `agrilink_plan_preference:${citizen.citizen_id}`;
+  const [planPreference, setPlanPreference] = useState(() => readPlanPreference(citizen.citizen_id));
+  const preferredPlan = planPreference.preferredPlan || currentKycTier;
+  const planPreferenceError = planPreference.error;
 
   useEffect(() => {
     let isCurrent = true;
@@ -108,6 +129,18 @@ export default function ProfileKycView({
       isCurrent = false;
     };
   }, []);
+
+  const handlePlanSelection = (tierKey) => {
+    try {
+      window.localStorage.setItem(planPreferenceKey, tierKey);
+      setPlanPreference({ preferredPlan: tierKey, error: null });
+    } catch {
+      setPlanPreference((previousPreference) => ({
+        ...previousPreference,
+        error: 'Could not save your plan preference in this browser.'
+      }));
+    }
+  };
 
   const handleProfileSubmit = (e) => {
     e.preventDefault();
@@ -272,38 +305,51 @@ export default function ProfileKycView({
         </div>
 
         {/* Comparison Grid */}
+        <div style={{ marginBottom: '12px' }}>
+          <h4 style={{ margin: '0 0 6px' }}>Choose your preferred plan</h4>
+          <p className="text-muted" style={{ fontSize: '0.85rem', margin: 0 }}>
+            You can change this preference anytime. It does not change your KYC status, wallet limits, or available personas.
+          </p>
+          {planPreferenceError && (
+            <p role="alert" style={{ color: 'var(--danger-600, #b91c1c)', fontSize: '0.85rem', margin: '8px 0 0' }}>
+              {planPreferenceError}
+            </p>
+          )}
+        </div>
         <div className="grid-3" style={{ background: 'var(--slate-50)', padding: '16px', borderRadius: '12px' }}>
           {Object.entries(KYC_TIERS_INFO).map(([tierKey, info]) => {
             const isCurrent = currentKycTier === tierKey;
+            const isPreferred = preferredPlan === tierKey;
             return (
-              <div 
-                key={tierKey} 
+              <button
+                type="button"
+                key={tierKey}
+                aria-pressed={isPreferred}
+                aria-label={`Choose ${info.name} as your preferred plan`}
+                onClick={() => handlePlanSelection(tierKey)}
                 style={{
                   background: 'white',
                   borderRadius: '10px',
                   padding: '14px',
-                  border: isCurrent ? `2px solid ${info.color}` : '1px solid var(--slate-200)',
-                  position: 'relative'
+                  border: isPreferred ? `2px solid ${info.color}` : '1px solid var(--slate-200)',
+                  width: '100%',
+                  color: 'inherit',
+                  font: 'inherit',
+                  textAlign: 'left',
+                  cursor: 'pointer'
                 }}
               >
-                {isCurrent && (
-                  <span 
-                    style={{
-                      position: 'absolute',
-                      top: '-10px',
-                      right: '12px',
-                      background: info.color,
-                      color: 'white',
-                      fontSize: '0.65rem',
-                      fontWeight: 700,
-                      padding: '2px 8px',
-                      borderRadius: '999px'
-                    }}
-                  >
-                    CURRENT TIER
-                  </span>
-                )}
-                <h4 style={{ fontSize: '0.95rem', color: info.color, marginBottom: '6px' }}>{info.name}</h4>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                  {isCurrent && (
+                    <span className="badge badge-gray">ACTIVE KYC</span>
+                  )}
+                  {isPreferred && (
+                    <span className="badge" style={{ backgroundColor: info.color, color: 'white' }}>
+                      PREFERRED PLAN
+                    </span>
+                  )}
+                </div>
+                <h4 style={{ fontSize: '0.95rem', color: info.color, margin: '0 0 6px' }}>{info.name}</h4>
                 <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div><strong>Max Balance:</strong> ₹{info.max_balance.toLocaleString('en-IN')}</div>
                   <div><strong>Single Tx:</strong> ₹{info.per_tx_limit.toLocaleString('en-IN')}</div>
@@ -312,10 +358,13 @@ export default function ProfileKycView({
                     <strong>Personas:</strong> {info.unlocked_personas.join(', ')}
                   </div>
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
+        <p className="text-muted" style={{ fontSize: '0.78rem', margin: '10px 0 0' }}>
+          Your active KYC tier remains <strong>{currentKycTier}</strong>; verification-based limits and eligibility do not change with this preference.
+        </p>
       </div>
 
       <div className="grid-2" style={{ alignItems: 'flex-start', gap: '24px' }}>
