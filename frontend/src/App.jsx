@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from './components/Header';
 import HomePage from './components/HomePage';
 import AuthModal from './components/AuthModal';
@@ -9,6 +9,8 @@ import VoiceSearchModal from './components/VoiceSearchModal';
 import authService from './services/authService';
 import citizenService from './services/citizenService';
 import walletService from './services/walletService';
+import personaService from './services/personaService';
+import adminService from './services/adminService';
 
 // Citizen Portal components
 import CitizenDashboard from './components/CitizenPortal/CitizenDashboard';
@@ -26,6 +28,7 @@ import BankAccountManagementView from './components/CitizenPortal/BankAccountMan
 import CitizenReportView from './components/CitizenPortal/CitizenReportView';
 
 // Admin Console components
+import AdminLoginView from './components/AdminConsole/AdminLoginView';
 import AdminOverview from './components/AdminConsole/AdminOverview';
 import PersonaApprovals from './components/AdminConsole/PersonaApprovals';
 import DisputesResolution from './components/AdminConsole/DisputesResolution';
@@ -117,6 +120,9 @@ export default function App() {
   const [unreadNotifs, setUnreadNotifs] = useState(3);
 
   // Admin Data State
+  const [adminSession, setAdminSession] = useState(() => (
+    adminService.getAdminToken() ? adminService.getAdminUser() : null
+  ));
   const [personaApplications, setPersonaApplications] = useState(INITIAL_PERSONA_APPLICATIONS);
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
   const [disputes, setDisputes] = useState(INITIAL_DISPUTES);
@@ -178,6 +184,80 @@ export default function App() {
     setIsAuthModalOpen(true);
   };
 
+  const applyPersonaRecordsToCitizen = (personaRecords, fallbackActive = null) => {
+    const records = Array.isArray(personaRecords) ? personaRecords : [];
+    const activeRecords = records.filter(p => p.status === 'ACTIVE');
+    const activePersonaTypes = activeRecords.map(p => p.persona_type);
+    const defaultPersona = activeRecords.find(p => p.is_default)?.persona_type
+      || fallbackActive
+      || activePersonaTypes[0]
+      || 'CUSTOMER';
+    const pendingApps = records
+      .filter(p => p.status === 'PENDING')
+      .map(p => ({
+        id: p.id,
+        persona: p.persona_type,
+        status: 'PENDING_APPROVAL',
+        applied_at: p.created_at
+      }));
+
+    setCitizen(prev => ({
+      ...prev,
+      persona_records: records,
+      personas: activePersonaTypes.length ? activePersonaTypes : prev.personas,
+      active_persona: defaultPersona,
+      pending_persona_applications: pendingApps
+    }));
+  };
+
+  const syncCitizenPersonas = async () => {
+    try {
+      const response = await personaService.getPersonas();
+      if (response?.data) {
+        applyPersonaRecordsToCitizen(response.data);
+      }
+      return response?.data || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const loadAdminPersonaApplications = async () => {
+    if (!adminService.getAdminToken()) return;
+    try {
+      const response = await adminService.getPendingPersonaApplications();
+      const items = (response?.data || []).map(item => ({
+        id: item.persona_id,
+        persona_id: item.persona_id,
+        approval_id: item.approval_id,
+        applicant_id: item.citizen_id,
+        applicant_name: item.citizen_name,
+        applicant_email: item.citizen_email,
+        applicant_mobile: item.citizen_mobile,
+        persona: item.persona_type,
+        kyc_tier: 'T0',
+        fpo_name: item.citizen_email || item.citizen_mobile || 'Registered Citizen',
+        license_ref: item.persona_id,
+        applied_at: item.applied_at,
+        status: item.status === 'PENDING' ? 'PENDING_APPROVAL' : item.status
+      }));
+      setPersonaApplications(items);
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        adminService.logout();
+        setAdminSession(null);
+      } else {
+        setOperationError(err.message || 'Could not load pending persona applications.');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (activeSurface === 'ADMIN' && adminSession) {
+      loadAdminPersonaApplications();
+    }
+  }, [activeSurface, adminSession]);
+
   const handleLoginSuccess = async () => {
     const [profileResult, walletResult] = await Promise.allSettled([
       citizenService.getMyProfile(),
@@ -196,14 +276,15 @@ export default function App() {
     const walletResponse = walletResult.value;
     const optionalResults = await Promise.allSettled([
       getAllWalletTransactions().then(data => ({ data })),
-      walletService.getHolds(),
+      walletService.getHolds().catch(err => (err.status === 404 ? { data: [] } : Promise.reject(err))),
       citizenService.getProfileHistory(),
       citizenService.getConsents(),
-      citizenService.getActiveSessions()
+      citizenService.getActiveSessions().catch(err => (err.status === 404 ? { data: [] } : Promise.reject(err))),
+      personaService.getPersonas().catch(() => ({ data: [] }))
     ]);
-    const optionalLabels = ['transaction history', 'escrow holds', 'profile history', 'consents', 'sessions'];
+    const optionalLabels = ['transaction history', 'escrow holds', 'profile history', 'consents', 'sessions', 'personas'];
     const optionalData = optionalResults.map(result => result.status === 'fulfilled' ? result.value : null);
-    const [transactionsResponse, holdsResponse, historyResponse, consentResponse, sessionResponse] = optionalData;
+    const [transactionsResponse, holdsResponse, historyResponse, consentResponse, sessionResponse, personasResponse] = optionalData;
     const failedOptionalRequests = optionalResults
       .map((result, index) => result.status === 'rejected' ? { label: optionalLabels[index], error: result.reason } : null)
       .filter(Boolean);
@@ -213,6 +294,24 @@ export default function App() {
     if (!profile || !walletData) {
       throw new Error('Your account data could not be loaded. Please try signing in again.');
     }
+
+    const personaRecords = personasResponse?.data || [];
+    const activePersonaRecords = personaRecords.filter(p => p.status === 'ACTIVE');
+    const activePersonaTypes = activePersonaRecords.length
+      ? activePersonaRecords.map(p => p.persona_type)
+      : (profile.active_personas || ['CUSTOMER']);
+    const resolvedActivePersona = activePersonaRecords.find(p => p.is_default)?.persona_type
+      || profile.active_persona
+      || activePersonaTypes[0]
+      || 'CUSTOMER';
+    const pendingPersonaApps = personaRecords
+      .filter(p => p.status === 'PENDING')
+      .map(p => ({
+        id: p.id,
+        persona: p.persona_type,
+        status: 'PENDING_APPROVAL',
+        applied_at: p.created_at
+      }));
 
     setRegisteredIdentifier('');
     setRegistrationNotice('');
@@ -228,8 +327,10 @@ export default function App() {
       address: [profile.address_line1, profile.address_line2, profile.city, profile.state_region, profile.postal_code]
         .filter(Boolean)
         .join(', '),
-      active_persona: profile.active_personas?.[0] || 'CUSTOMER',
-      personas: profile.active_personas || [],
+      active_persona: resolvedActivePersona,
+      personas: activePersonaTypes,
+      persona_records: personaRecords,
+      pending_persona_applications: pendingPersonaApps,
       kyc_tier: profile.kyc_tier || 'T0',
       verified_bank_accounts: (profile.bank_accounts || []).map(account => ({
         ...account,
@@ -719,37 +820,61 @@ export default function App() {
   };
 
   // Switch Persona (CID-FR-09)
-  const handleSwitchPersona = (newPersona) => {
-    setCitizen(prev => ({ ...prev, active_persona: newPersona }));
+  const handleSwitchPersona = async (newPersona) => {
+    const normalized = newPersona === 'BUYER'
+      ? 'CUSTOMER'
+      : newPersona === 'DELIVERY_PERSON'
+        ? 'DELIVERY_PARTNER'
+        : newPersona;
+
+    let records = citizen.persona_records || [];
+    let targetRecord = records.find(
+      p => p.persona_type === normalized && p.status === 'ACTIVE'
+    );
+
+    if (!targetRecord && authService.isAuthenticated()) {
+      records = await syncCitizenPersonas();
+      targetRecord = records.find(
+        p => p.persona_type === normalized && p.status === 'ACTIVE'
+      );
+    }
+
+    if (targetRecord && authService.isAuthenticated()) {
+      await personaService.activatePersona(targetRecord.id);
+      await syncCitizenPersonas();
+    } else {
+      setCitizen(prev => ({ ...prev, active_persona: normalized }));
+    }
+
     recordEvent(
       "PersonaSwitched",
       "CID-PERSONA-SWITCH",
-      { citizen_id: citizen.citizen_id, active_persona: newPersona },
-      `Citizen switched active persona to ${newPersona}. Next JWT carries updated claim.`,
+      { citizen_id: citizen.citizen_id, active_persona: normalized },
+      `Citizen switched active persona to ${normalized}. Next JWT carries updated claim.`,
       "Role & Persona Management"
     );
   };
 
   // Submit Persona Application (CID-FR-08)
-  const handleSubmitPersonaApplication = (appData) => {
-    const newApp = {
-      id: `APP-PER-${Math.floor(900 + Math.random() * 99)}`,
-      applicant_id: citizen.citizen_id,
-      applicant_name: citizen.full_name,
-      persona: appData.persona,
-      kyc_tier: citizen.kyc_tier,
-      applied_at: new Date().toISOString(),
-      fpo_name: appData.fpo_name,
-      license_ref: appData.license_ref,
-      status: "PENDING_APPROVAL",
-      supporting_doc: "Govt_Certified_FPO_Permit.pdf",
-      comments: appData.notes
-    };
-    setPersonaApplications(prev => [newApp, ...prev]);
+  const handleSubmitPersonaApplication = async (appData) => {
+    const response = await personaService.applyPersona(
+      appData.persona,
+      appData.fpo_name || appData.persona,
+      appData.notes,
+      {
+        fpo_name: appData.fpo_name,
+        license_ref: appData.license_ref
+      }
+    );
+
+    await syncCitizenPersonas();
+    if (adminSession) {
+      await loadAdminPersonaApplications();
+    }
 
     recordEvent(
       "PersonaApplicationSubmitted",
-      newApp.id,
+      response?.persona_id || `APP-PER-${Date.now()}`,
       { applicant_id: citizen.citizen_id, persona: appData.persona },
       `Application submitted for restricted persona ${appData.persona}`,
       "Role & Persona Management"
@@ -847,44 +972,69 @@ export default function App() {
   };
 
   // Admin Actions
-  const handleApprovePersona = (appId, notes) => {
-    setPersonaApplications(prev => prev.map(a => {
-      if (a.id === appId) {
-        // If this is current citizen, grant persona
-        if (a.applicant_id === citizen.citizen_id) {
-          setCitizen(c => ({
-            ...c,
-            personas: Array.from(new Set([...c.personas, a.persona]))
-          }));
-        }
-        return {
-          ...a,
-          status: 'APPROVED',
-          approved_by: 'ADMIN_COMPLIANCE_DESK',
-          approved_at: new Date().toISOString()
-        };
-      }
-      return a;
-    }));
-
-    recordEvent(
-      "PersonaApproved",
-      appId,
-      { application_id: appId, notes },
-      `Compliance desk approved restricted persona application`,
-      "Role & Persona Management"
-    );
+  const handleAdminLoginSuccess = async (admin) => {
+    setAdminSession(admin);
+    setActiveTab('admin-approvals');
+    await loadAdminPersonaApplications();
   };
 
-  const handleRejectPersona = (appId, reason) => {
-    setPersonaApplications(prev => prev.map(a => a.id === appId ? { ...a, status: 'REJECTED', comments: reason } : a));
-    recordEvent(
-      "PersonaRejected",
-      appId,
-      { application_id: appId, reason },
-      `Compliance desk rejected persona application: ${reason}`,
-      "Role & Persona Management"
-    );
+  const handleAdminLogout = () => {
+    adminService.logout();
+    setAdminSession(null);
+  };
+
+  const handleApprovePersona = async (appId, notes) => {
+    try {
+      await adminService.decidePersonaApplication(appId, 'APPROVED', 'ADMIN_APPROVED');
+      setPersonaApplications(prev => prev.map(a => {
+        if (a.id === appId || a.persona_id === appId) {
+          return {
+            ...a,
+            status: 'APPROVED',
+            approved_by: adminSession?.username || 'ADMIN_COMPLIANCE_DESK',
+            approved_at: new Date().toISOString()
+          };
+        }
+        return a;
+      }));
+      await loadAdminPersonaApplications();
+      if (isLoggedIn) {
+        await syncCitizenPersonas();
+      }
+      recordEvent(
+        "PersonaApproved",
+        appId,
+        { application_id: appId, notes },
+        `Compliance desk approved restricted persona application`,
+        "Role & Persona Management"
+      );
+    } catch (error) {
+      setOperationError(error.message || 'Could not approve persona application.');
+    }
+  };
+
+  const handleRejectPersona = async (appId, reason) => {
+    try {
+      await adminService.decidePersonaApplication(appId, 'REJECTED', reason || 'ADMIN_REJECTED');
+      setPersonaApplications(prev => prev.map(a => (
+        (a.id === appId || a.persona_id === appId)
+          ? { ...a, status: 'REJECTED', comments: reason }
+          : a
+      )));
+      await loadAdminPersonaApplications();
+      if (isLoggedIn) {
+        await syncCitizenPersonas();
+      }
+      recordEvent(
+        "PersonaRejected",
+        appId,
+        { application_id: appId, reason },
+        `Compliance desk rejected persona application: ${reason}`,
+        "Role & Persona Management"
+      );
+    } catch (error) {
+      setOperationError(error.message || 'Could not reject persona application.');
+    }
   };
 
   const handleResolveDispute = ({ dispute_id, action, reason_code, admin_notes }) => {
@@ -1098,9 +1248,46 @@ export default function App() {
             )}
           </>
           )
+        ) : !adminSession ? (
+          <AdminLoginView onLoginSuccess={handleAdminLoginSuccess} />
         ) : (
           /* ADMIN OPERATIONS SURFACE */
           <>
+            <div
+              className="card"
+              style={{
+                marginBottom: '16px',
+                padding: '12px 18px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}
+            >
+              <div>
+                <strong>Admin Session:</strong> {adminSession.full_name || adminSession.username}
+                <span className="badge badge-green" style={{ marginLeft: '10px' }}>
+                  {adminSession.role || 'ADMIN_COMPLIANCE_DESK'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={loadAdminPersonaApplications}
+                >
+                  Refresh Queue
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm"
+                  onClick={handleAdminLogout}
+                >
+                  Sign Out Admin
+                </button>
+              </div>
+            </div>
             {activeTab === 'admin-overview' && (
               <AdminOverview
                 wallet={wallet}

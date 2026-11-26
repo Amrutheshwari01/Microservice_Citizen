@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     # Inter-Microservice Service-to-Service Secret
     INTERNAL_SERVICE_SECRET: str = "insecure-internal-secret-for-marketplace-and-rto"
 
+    # Admin Console Credentials
+    ADMIN_USERNAME: str = "admin@agrilink.in"
+    ADMIN_PASSWORD: str = "Admin@123"
+    ADMIN_FULL_NAME: str = "AgriLink Compliance Admin"
+
     # AI & Face Recognition (Hugging Face + Local Fallback)
     HUGGINGFACE_API_KEY: str = ""
     HUGGINGFACE_MODEL: str = "google/vit-base-patch16-224"

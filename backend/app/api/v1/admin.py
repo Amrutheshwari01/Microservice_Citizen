@@ -6,15 +6,19 @@ Supports persona approval review, KYC review, wallet limits, and audit logs.
 
 from __future__ import annotations
 
+import hmac
 import uuid
 import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from app.api.v1.dependencies import require_internal_service
-from app.core.exceptions import NotFoundException
+from app.api.v1.dependencies import require_admin_or_internal_service
+from app.core.config import settings
+from app.core.exceptions import NotFoundException, UnauthorizedException
+from app.core.security import create_access_token
 from app.db.dependencies import get_db
 from app.repositories.admin_repo import AdminRepository
 from app.repositories.kyc_repo import KycRepository
@@ -35,11 +39,55 @@ logger = logging.getLogger("cis.admin")
 router = APIRouter(
     prefix="/admin",
     tags=["Admin Operations"],
-    dependencies=[Depends(require_internal_service)],
+)
+protected_router = APIRouter(
+    dependencies=[Depends(require_admin_or_internal_service)],
 )
 
 
-@router.get(
+class AdminLoginRequest(BaseModel):
+    identifier: Optional[str] = Field(None, description="Admin username or email")
+    username: Optional[str] = Field(None, description="Admin username or email")
+    email: Optional[str] = Field(None, description="Admin email")
+    password: str = Field(..., min_length=1)
+
+
+@router.post(
+    "/login",
+    summary="Authenticate as Admin Console operator",
+)
+def admin_login(req: AdminLoginRequest):
+    ident = (req.identifier or req.username or req.email or "").strip().lower()
+    expected_user = settings.ADMIN_USERNAME.strip().lower()
+    allowed_identifiers = {expected_user, "admin"}
+    if ident not in allowed_identifiers or not hmac.compare_digest(
+        req.password, settings.ADMIN_PASSWORD
+    ):
+        raise UnauthorizedException("Invalid admin credentials")
+
+    token, _, expires_at = create_access_token(
+        subject="admin",
+        claims={
+            "type": "admin",
+            "role": "ADMIN_COMPLIANCE_DESK",
+            "name": settings.ADMIN_FULL_NAME,
+            "email": settings.ADMIN_USERNAME,
+        },
+    )
+    return {
+        "success": True,
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_at": expires_at.isoformat(),
+        "admin": {
+            "username": settings.ADMIN_USERNAME,
+            "full_name": settings.ADMIN_FULL_NAME,
+            "role": "ADMIN_COMPLIANCE_DESK",
+        },
+    }
+
+
+@protected_router.get(
     "/persona-applications",
     response_model=PersonaApplicationListResponse,
     summary="List pending persona applications",
@@ -70,7 +118,7 @@ def list_pending_persona_applications(
     return PersonaApplicationListResponse(total=len(items), data=items)
 
 
-@router.post(
+@protected_router.post(
     "/persona-applications/{persona_id}/decide",
     summary="Approve or reject a persona application",
 )
@@ -93,7 +141,7 @@ def decide_persona_application(
     return result
 
 
-@router.post(
+@protected_router.post(
     "/kyc/{record_id}/review",
     summary="Review and verify/reject a KYC record",
 )
@@ -132,7 +180,7 @@ def review_kyc_record(
     }
 
 
-@router.get(
+@protected_router.get(
     "/audit",
     response_model=AuditLogListResponse,
     summary="Query audit logs",
@@ -172,7 +220,7 @@ def get_audit_logs(
     return AuditLogListResponse(total=len(items), data=items)
 
 
-@router.get(
+@protected_router.get(
     "/limits",
     response_model=WalletLimitListResponse,
     summary="List wallet transaction limits",
@@ -185,3 +233,6 @@ def get_wallet_limits(
     limits = repo.list_wallet_limits(kyc_tier=kyc_tier)
     items = [WalletLimitItem.model_validate(lim) for lim in limits]
     return WalletLimitListResponse(total=len(items), data=items)
+
+
+router.include_router(protected_router)

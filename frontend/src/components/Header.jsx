@@ -166,7 +166,7 @@ export default function Header({
                       }}
                     >
                       <span className="persona-icon-badge">
-                        {persona === 'FARMER' ? '🚜' : persona === 'BUYER' ? '💼' : persona === 'AGGREGATOR' ? '🏢' : '🚚'}
+                        {persona === 'FARMER' ? '🚜' : (persona === 'BUYER' || persona === 'CUSTOMER') ? '💼' : persona === 'AGGREGATOR' ? '🏢' : '🚚'}
                       </span>
                       <div className="persona-info">
                         <strong>{persona}</strong>
@@ -183,7 +183,7 @@ export default function Header({
                         setShowPersonaMenu(false);
                       }}
                     >
-                      + Apply for Aggregator / Delivery
+                      + Manage / Apply for Roles
                     </button>
                   </div>
                 </div>

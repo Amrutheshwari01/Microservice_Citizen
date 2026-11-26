@@ -56,6 +56,13 @@ def get_citizen_status(
     kyc = kyc_repo.get_latest_for_citizen(citizen_id)
     wallet_repo = WalletRepository(db)
     wallet = wallet_repo.get_wallet_by_citizen(citizen_id)
+    persona_repo = PersonaRepository(db)
+    all_personas = persona_repo.get_all_for_citizen(citizen_id)
+    active_personas = [p for p in all_personas if p.status == "ACTIVE"]
+    active_persona = next(
+        (p.persona_type for p in active_personas if p.is_default),
+        active_personas[0].persona_type if active_personas else "CUSTOMER",
+    )
 
     return {
         "citizen_id": str(citizen_id),
@@ -67,6 +74,8 @@ def get_citizen_status(
         "kyc_status": kyc.status if kyc else "PENDING",
         "wallet_id": str(wallet.id) if wallet else None,
         "wallet_status": wallet.status if wallet else None,
+        "active_persona": active_persona,
+        "active_personas": [p.persona_type for p in active_personas],
     }
 
 

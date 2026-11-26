@@ -89,6 +89,7 @@ class ProfileResponse(BaseModel):
     bank_accounts: List[Dict[str, Any]]
 
     # Related
+    active_persona: str = "CUSTOMER"
     active_personas: List[str]
     wallet_id: Optional[uuid.UUID]
     wallet_status: Optional[str]

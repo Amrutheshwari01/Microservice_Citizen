@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Tuple
+from typing import Optional, Tuple
 from fastapi import Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -76,3 +76,28 @@ def require_internal_service(
     if not verify_internal_service_key(x_service_key):
         raise ForbiddenException("Invalid internal service credentials")
     return True
+
+
+def require_admin_or_internal_service(
+    x_service_key: Optional[str] = Header(
+        None, description="Service-to-service preshared secret"
+    ),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+) -> bool:
+    """
+    Allows either an internal microservice (via X-Service-Key) or an
+    authenticated Admin Console operator (via Bearer admin JWT).
+    """
+    if x_service_key and verify_internal_service_key(x_service_key):
+        return True
+
+    if credentials:
+        try:
+            payload = decode_token(credentials.credentials)
+        except Exception as exc:
+            raise UnauthorizedException(f"Invalid or expired admin token: {exc}")
+        if payload.get("type") == "admin":
+            return True
+        raise ForbiddenException("Admin privileges required")
+
+    raise UnauthorizedException("Admin authentication or service key required")

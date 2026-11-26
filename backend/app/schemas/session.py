@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class SessionResponse(BaseModel):
@@ -22,6 +22,13 @@ class SessionResponse(BaseModel):
     is_current: bool = False
 
     model_config = {"from_attributes": True}
+
+    @field_validator("ip_address", mode="before")
+    @classmethod
+    def coerce_ip_address(cls, value: object) -> Optional[str]:
+        if value is None:
+            return None
+        return str(value)
 
 
 class SessionListResponse(BaseModel):

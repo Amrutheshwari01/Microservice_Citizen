@@ -56,7 +56,13 @@ class CitizenService:
     def get_full_profile(self, citizen: Citizen) -> Dict[str, Any]:
         profile = self.profile_repo.get_profile(citizen.id)
         kyc = self.kyc_repo.get_latest_for_citizen(citizen.id)
-        active_personas = self.profile_repo.get_active_personas(citizen.id)
+        personas = PersonaRepository(self.db).get_all_for_citizen(citizen.id)
+        active_persona_objs = [p for p in personas if p.status == "ACTIVE"]
+        active_personas = [p.persona_type for p in active_persona_objs]
+        active_persona = next(
+            (p.persona_type for p in active_persona_objs if p.is_default),
+            active_personas[0] if active_personas else "CUSTOMER",
+        )
         wallet = self.profile_repo.get_wallet(citizen.id)
 
         return {
@@ -81,6 +87,7 @@ class CitizenService:
             "gender": profile.gender if profile else None,
             "addresses": profile.addresses if profile else [],
             "bank_accounts": profile.bank_accounts if profile else [],
+            "active_persona": active_persona,
             "active_personas": active_personas,
             "wallet_id": wallet.id if wallet else None,
             "wallet_status": wallet.status if wallet else None,
@@ -688,7 +695,7 @@ class WalletService:
                 "status": h.status,
                 "reason_code": h.reason_code,
                 "expires_at": h.expires_at.isoformat() if h.expires_at else None,
-                "created_at": h.created_at.isoformat(),
+                "created_at": h.created_at.isoformat() if h.created_at else None,
                 "released_at": h.released_at.isoformat() if h.released_at else None,
             }
             for h in holds

@@ -24,23 +24,25 @@ export default function PersonaManagementView({
   const [licenseRef, setLicenseRef] = useState('');
   const [notes, setNotes] = useState('');
   const [submittedMessage, setSubmittedMessage] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availableRoles = [
+    {
+      id: "CUSTOMER",
+      name: "Citizen / Mandi Buyer",
+      icon: "💼",
+      restricted: false,
+      tierRequired: "T0",
+      description: "Marketplace produce purchasing, mandi lot bidding, wallet transfers, and escrow-protected orders."
+    },
     {
       id: "FARMER",
       name: "Farmer Producer",
       icon: "🚜",
-      restricted: false,
+      restricted: true,
       tierRequired: "T0",
-      description: "Produce cultivation, seed inputs, crop sales, APMC auction bids, direct wallet credits."
-    },
-    {
-      id: "BUYER",
-      name: "Mandi Trader / Buyer",
-      icon: "💼",
-      restricted: false,
-      tierRequired: "T1",
-      description: "Commercial mandi procurement, lot bidding, bulk escrow deposit, cold storage haulage booking."
+      description: "Produce cultivation, crop listings, APMC auction bids, direct wallet credits, and AgriLink Farmer login."
     },
     {
       id: "AGGREGATOR",
@@ -51,7 +53,7 @@ export default function PersonaManagementView({
       description: "Pooling produce from hundreds of village farmers, bulk logistics contracts, multi-account split settlement."
     },
     {
-      id: "DELIVERY_PERSON",
+      id: "DELIVERY_PARTNER",
       name: "Rural Freight Transporter",
       icon: "🚚",
       restricted: true,
@@ -60,20 +62,39 @@ export default function PersonaManagementView({
     }
   ];
 
-  const handleApplySubmit = (e) => {
+  const handleApplySubmit = async (e) => {
     e.preventDefault();
-    onSubmitPersonaApplication({
-      persona: applyModalPersona,
-      fpo_name: fpoName || 'Rural Transporter Fleet',
-      license_ref: licenseRef || 'MH-REG-2026-9921',
-      notes: notes || 'Verified with relevant district transport / agricultural authority.'
-    });
-    setSubmittedMessage(`Application for ${applyModalPersona} submitted successfully to Administrator Approval Queue!`);
-    setApplyModalPersona(null);
-    setFpoName('');
-    setLicenseRef('');
-    setNotes('');
-    setTimeout(() => setSubmittedMessage(null), 6000);
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      await onSubmitPersonaApplication({
+        persona: applyModalPersona,
+        fpo_name: fpoName || 'AgriLink Member',
+        license_ref: licenseRef || 'REG-2026-9921',
+        notes: notes || 'Verified with relevant district transport / agricultural authority.'
+      });
+      setSubmittedMessage(`Application for ${applyModalPersona} submitted successfully to Administrator Approval Queue!`);
+      setApplyModalPersona(null);
+      setFpoName('');
+      setLicenseRef('');
+      setNotes('');
+      setTimeout(() => setSubmittedMessage(null), 6000);
+    } catch (err) {
+      setSubmitError(err.message || `Could not submit ${applyModalPersona} application.`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSwitchClick = async (personaId) => {
+    setSubmitError(null);
+    try {
+      await onSwitchPersona(personaId);
+      setSubmittedMessage(`Switched active role to ${personaId}.`);
+      setTimeout(() => setSubmittedMessage(null), 4000);
+    } catch (err) {
+      setSubmitError(err.message || `Could not switch role to ${personaId}.`);
+    }
   };
 
   return (
@@ -91,6 +112,13 @@ export default function PersonaManagementView({
         <div className="alert-callout success" style={{ marginBottom: '20px' }}>
           <CheckCircle2 size={20} />
           <span>{submittedMessage}</span>
+        </div>
+      )}
+
+      {submitError && (
+        <div className="alert-callout error" style={{ marginBottom: '20px' }}>
+          <AlertCircle size={20} />
+          <span>{submitError}</span>
         </div>
       )}
 
@@ -114,15 +142,17 @@ export default function PersonaManagementView({
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {citizen.personas.map(persona => (
               <button
                 key={persona}
                 className={`btn ${citizen.active_persona === persona ? 'btn-gold' : 'btn-secondary'}`}
                 style={{ borderRadius: '999px', padding: '8px 18px' }}
-                onClick={() => onSwitchPersona(persona)}
+                onClick={() => handleSwitchClick(persona)}
               >
-                <span>{persona === 'FARMER' ? '🚜' : '💼'} Switch to {persona}</span>
+                <span>
+                  {persona === 'FARMER' ? '🚜' : persona === 'AGGREGATOR' ? '🏢' : persona === 'DELIVERY_PARTNER' ? '🚚' : '💼'} Switch to {persona}
+                </span>
               </button>
             ))}
           </div>
@@ -172,7 +202,7 @@ export default function PersonaManagementView({
                     <span>Currently Active Persona</span>
                   </button>
                 ) : isAssigned ? (
-                  <button className="btn btn-primary btn-block" onClick={() => onSwitchPersona(role.id)}>
+                  <button className="btn btn-primary btn-block" onClick={() => handleSwitchClick(role.id)}>
                     <Layers size={16} />
                     <span>Switch to this Persona</span>
                   </button>
@@ -222,7 +252,11 @@ export default function PersonaManagementView({
 
                 <div className="form-group">
                   <label className="form-label">
-                    {applyModalPersona === 'AGGREGATOR' ? 'FPO / Cooperative Society Name' : 'Transport Fleet / Business Name'}
+                    {applyModalPersona === 'FARMER'
+                      ? 'Farm / Village / FPO Name'
+                      : applyModalPersona === 'AGGREGATOR'
+                        ? 'FPO / Cooperative Society Name'
+                        : 'Transport Fleet / Business Name'}
                   </label>
                   <input 
                     type="text" 
@@ -236,7 +270,11 @@ export default function PersonaManagementView({
 
                 <div className="form-group">
                   <label className="form-label">
-                    {applyModalPersona === 'AGGREGATOR' ? 'FPO Registration / Trade License Ref' : 'Commercial Driving License / Fleet Permit Ref'}
+                    {applyModalPersona === 'FARMER'
+                      ? 'Farmer ID / Land Record Ref'
+                      : applyModalPersona === 'AGGREGATOR'
+                        ? 'FPO Registration / Trade License Ref'
+                        : 'Commercial Driving License / Fleet Permit Ref'}
                   </label>
                   <input 
                     type="text" 
@@ -264,8 +302,8 @@ export default function PersonaManagementView({
                 <button type="button" className="btn btn-secondary" onClick={() => setApplyModalPersona(null)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Submit to Admin Queue
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Submitting...' : 'Submit to Admin Queue'}
                 </button>
               </div>
             </form>

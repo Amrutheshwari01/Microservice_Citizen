@@ -94,7 +94,7 @@ export default function PersonaApprovals({
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontSize: '1.2rem' }}>
-                          {app.persona === 'AGGREGATOR' ? '🏢' : '🚚'}
+                          {app.persona === 'FARMER' ? '🚜' : app.persona === 'AGGREGATOR' ? '🏢' : (app.persona === 'CUSTOMER' || app.persona === 'BUYER') ? '💼' : '🚚'}
                         </span>
                         <div>
                           <strong>{app.persona}</strong>
