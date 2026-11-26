@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   MapPin,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react';
 import { TRANSLATIONS } from '../data/i18n';
 import { KYC_TIERS_INFO } from '../data/mockData';
@@ -355,6 +356,13 @@ export default function Header({
               >
                 <Building2 size={15} />
                 <span>{t.nav.bank || 'Bank Accounts'}</span>
+              </button>
+              <button
+                className={`nav-tab ${activeTab === 'report' ? 'active' : ''}`}
+                onClick={() => setActiveTab('report')}
+              >
+                <FileText size={15} />
+                <span>Reports &amp; ID Card</span>
               </button>
               <button 
                 className={`nav-tab ${activeTab === 'personas' ? 'active' : ''}`}

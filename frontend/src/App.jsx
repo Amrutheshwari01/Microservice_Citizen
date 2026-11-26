@@ -23,6 +23,7 @@ import ConsentManagementView from './components/CitizenPortal/ConsentManagementV
 import SecuritySessionsView from './components/CitizenPortal/SecuritySessionsView';
 import AddressManagementView from './components/CitizenPortal/AddressManagementView';
 import BankAccountManagementView from './components/CitizenPortal/BankAccountManagementView';
+import CitizenReportView from './components/CitizenPortal/CitizenReportView';
 
 // Admin Console components
 import AdminOverview from './components/AdminConsole/AdminOverview';
@@ -1027,6 +1028,13 @@ export default function App() {
                 onAddBankAccount={handleAddBankAccount}
                 onDeleteBankAccount={handleDeleteBankAccount}
                 onSetDefaultBankAccount={handleSetDefaultBankAccount}
+              />
+            )}
+
+            {activeTab === 'report' && (
+              <CitizenReportView
+                citizen={citizen}
+                bankAccounts={bankAccounts}
               />
             )}
 
