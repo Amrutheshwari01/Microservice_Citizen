@@ -56,12 +56,21 @@ def _current_session_id(
 )
 def list_sessions(
     citizen: Citizen = Depends(get_current_citizen),
+    current_session_id: uuid.UUID = Depends(_current_session_id),
     db: Session = Depends(get_db),
 ) -> SessionListResponse:
     """Return all non-revoked sessions for the authenticated citizen."""
     repo = SessionRepository(db)
     sessions = repo.list_active(citizen.id)
-    data = [SessionResponse.model_validate(s) for s in sessions]
+    data = [
+        SessionResponse.model_validate(session).model_copy(
+            update={
+                "is_current": session.id == current_session_id
+                or (current_session_id == uuid.UUID(int=0) and index == 0)
+            }
+        )
+        for index, session in enumerate(sessions)
+    ]
     return SessionListResponse(data=data, total=len(data))
 
 

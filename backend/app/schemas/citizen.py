@@ -7,11 +7,48 @@ import uuid
 from datetime import date
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
+
+
+class SavedAddress(BaseModel):
+    id: Optional[str] = Field(None, max_length=100)
+    address_type: Optional[str] = Field(None, max_length=30)
+    address_label: Optional[str] = Field(None, max_length=100)
+    house_flat_number: Optional[str] = Field(None, max_length=100)
+    building_name: Optional[str] = Field(None, max_length=150)
+    street_name: Optional[str] = Field(None, max_length=150)
+    locality_area: Optional[str] = Field(None, max_length=150)
+    landmark: Optional[str] = Field(None, max_length=150)
+    city_town: Optional[str] = Field(None, max_length=100)
+    district: Optional[str] = Field(None, max_length=100)
+    state_code: Optional[str] = Field(None, max_length=10)
+    postal_code: Optional[str] = Field(None, max_length=20)
+    country_code: Optional[str] = Field(None, max_length=2)
+    is_default: bool = False
+
+    model_config = {"extra": "forbid"}
+
+
+class SavedBankAccount(BaseModel):
+    id: Optional[str] = Field(None, max_length=100)
+    account_holder_name: Optional[str] = Field(None, max_length=150)
+    bank_name: Optional[str] = Field(None, max_length=100)
+    account_number_masked: Optional[str] = Field(None, max_length=40)
+    ifsc_code: Optional[str] = Field(None, max_length=11)
+    branch_name: Optional[str] = Field(None, max_length=100)
+    account_type: Optional[str] = Field(None, max_length=20)
+    proof_document_type: Optional[str] = Field(None, max_length=40)
+    verification_status: Optional[str] = Field(None, max_length=20)
+    is_primary: bool = False
+    created_at: Optional[str] = Field(None, max_length=50)
+
+    model_config = {"extra": "forbid"}
 
 
 class ProfileUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2, max_length=150)
+    email: Optional[EmailStr] = Field(None, max_length=254)
+    mobile: Optional[str] = Field(None, max_length=24)
     preferred_language: Optional[str] = Field(None, max_length=20)
     nationality_code: Optional[str] = Field(None, min_length=2, max_length=2)
     date_of_birth: Optional[date] = None
@@ -21,6 +58,9 @@ class ProfileUpdateRequest(BaseModel):
     state_region: Optional[str] = Field(None, max_length=100)
     postal_code: Optional[str] = Field(None, max_length=20)
     country_code: Optional[str] = Field(None, min_length=2, max_length=2)
+    gender: Optional[str] = Field(None, max_length=30)
+    addresses: Optional[List[SavedAddress]] = Field(None, max_length=25)
+    bank_accounts: Optional[List[SavedBankAccount]] = Field(None, max_length=10)
 
 
 class ProfileResponse(BaseModel):
@@ -43,6 +83,9 @@ class ProfileResponse(BaseModel):
     country_code: Optional[str]
     preferred_language: Optional[str]
     profile_photo_ref: Optional[str]
+    gender: Optional[str]
+    addresses: List[Dict[str, Any]]
+    bank_accounts: List[Dict[str, Any]]
 
     # Related
     active_personas: List[str]

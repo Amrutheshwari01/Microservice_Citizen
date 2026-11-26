@@ -15,7 +15,7 @@ export default function MfaModal({
 
   if (!isOpen) return null;
 
-  const handleVerify = (e) => {
+  const handleVerify = async (e) => {
     e.preventDefault();
     if (!otp || otp.length < 4) {
       setError('Please enter the 4-digit MFA verification code.');
@@ -23,11 +23,16 @@ export default function MfaModal({
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onVerified();
+    setError('');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 450));
+      await onVerified();
       onClose();
-    }, 450);
+    } catch (verificationError) {
+      setError(verificationError.message || 'The action could not be completed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

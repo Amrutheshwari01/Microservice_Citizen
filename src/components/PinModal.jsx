@@ -40,10 +40,16 @@ export default function PinModal({
     setError('');
   };
 
-  const verifyPin = (enteredPin) => {
+  const verifyPin = async (enteredPin) => {
     if (enteredPin === currentPin) {
-      onSuccess();
-      onClose();
+      setError('');
+      try {
+        await onSuccess();
+        onClose();
+      } catch (requestError) {
+        setError(requestError.message || 'The wallet operation could not be completed.');
+        setPin('');
+      }
     } else {
       const newFails = localFailures + 1;
       setLocalFailures(newFails);
@@ -59,7 +65,7 @@ export default function PinModal({
     }
   };
 
-  const handleSaveNewPin = (e) => {
+  const handleSaveNewPin = async (e) => {
     e.preventDefault();
     if (pin.length !== 4) {
       setError('PIN must be exactly 4 digits.');
@@ -69,8 +75,12 @@ export default function PinModal({
       setError('Confirmation PIN does not match.');
       return;
     }
-    onSuccess(pin);
-    onClose();
+    try {
+      await onSuccess(pin);
+      onClose();
+    } catch (requestError) {
+      setError(requestError.message || 'Could not save your PIN.');
+    }
   };
 
   return (

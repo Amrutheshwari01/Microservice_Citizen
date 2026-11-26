@@ -7,6 +7,8 @@ import PinModal from './components/PinModal';
 import NotificationDrawer from './components/NotificationDrawer';
 import VoiceSearchModal from './components/VoiceSearchModal';
 import authService from './services/authService';
+import citizenService from './services/citizenService';
+import walletService from './services/walletService';
 
 // Citizen Portal components
 import CitizenDashboard from './components/CitizenPortal/CitizenDashboard';
@@ -56,6 +58,40 @@ import {
 
 import './App.css';
 
+const mapWalletTransaction = (transaction) => {
+  const transactionType = transaction.transaction_type || 'ADJUSTMENT';
+  const isCredit = transaction.direction === 'CREDIT'
+    || ['TOPUP', 'REFUND', 'RELEASE'].includes(transactionType);
+  return {
+    id: transaction.id,
+    business_ref: transaction.reference_type || transaction.id,
+    type: isCredit ? 'CREDIT' : transactionType === 'CASHOUT' ? 'PAYOUT' : 'DEBIT',
+    category: transactionType.replaceAll('_', ' '),
+    amount: Number(transaction.amount),
+    fee: 0,
+    net_amount: Number(transaction.amount),
+    counterparty: transaction.counterparty_wallet_id || 'Wallet',
+    timestamp: transaction.created_at,
+    status: transaction.status === 'POSTED' ? 'COMPLETED' : transaction.status,
+    description: transaction.description || transactionType,
+    idempotency_key: ''
+  };
+};
+
+const getAllWalletTransactions = async () => {
+  const allTransactions = [];
+  let offset = 0;
+  const pageSize = 200;
+
+  while (true) {
+    const response = await walletService.getTransactions(pageSize, offset);
+    const page = response?.data || [];
+    allTransactions.push(...page);
+    if (page.length < pageSize) return allTransactions;
+    offset += pageSize;
+  }
+};
+
 export default function App() {
   // Surface & Navigation state
   const [activeSurface, setActiveSurface] = useState('CITIZEN'); // 'CITIZEN' | 'ADMIN'
@@ -64,6 +100,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false); // First show home/login page, then navigate to dashboard
   const [registeredIdentifier, setRegisteredIdentifier] = useState('');
   const [registrationNotice, setRegistrationNotice] = useState('');
+  const [operationError, setOperationError] = useState(null);
 
   // Core Data State
   const [citizen, setCitizen] = useState(INITIAL_CITIZEN);
@@ -140,31 +177,104 @@ export default function App() {
     setIsAuthModalOpen(true);
   };
 
-  const handleLoginSuccess = (loginData) => {
+  const handleLoginSuccess = async () => {
+    const [
+      profileResponse,
+      walletResponse,
+      transactionsResponse,
+      holdsResponse,
+      historyResponse,
+      consentResponse,
+      sessionResponse
+    ] = await Promise.all([
+      citizenService.getMyProfile(),
+      walletService.getWalletSummary(),
+      getAllWalletTransactions().then(data => ({ data })),
+      walletService.getHolds(),
+      citizenService.getProfileHistory(),
+      citizenService.getConsents(),
+      citizenService.getActiveSessions()
+    ]);
+    const profile = profileResponse?.data;
+    const walletData = walletResponse?.data;
+    if (!profile || !walletData) {
+      throw new Error('Your account data could not be loaded. Please try signing in again.');
+    }
+
     setRegisteredIdentifier('');
     setRegistrationNotice('');
-    setIsLoggedIn(true);
-    if (loginData?.full_name) {
-      setCitizen(prev => ({
-        ...prev,
-        citizen_id: loginData.citizen_id || prev.citizen_id,
-        full_name: loginData.full_name,
-        email: loginData.email || prev.email,
-        mobile: loginData.mobile || prev.mobile,
-        active_persona: loginData.active_persona || prev.active_persona,
-        kyc_tier: loginData.kyc_tier || prev.kyc_tier
-      }));
-    }
+    setCitizen(prev => ({
+      ...prev,
+      ...profile,
+      citizen_id: profile.citizen_id,
+      full_name: profile.full_name,
+      email: profile.email || '',
+      mobile: profile.mobile || '',
+      nationality: profile.nationality_code || 'IN',
+      language: profile.preferred_language || 'en',
+      address: [profile.address_line1, profile.address_line2, profile.city, profile.state_region, profile.postal_code]
+        .filter(Boolean)
+        .join(', '),
+      active_persona: profile.active_personas?.[0] || 'CUSTOMER',
+      personas: profile.active_personas || [],
+      kyc_tier: profile.kyc_tier || 'T0',
+      verified_bank_accounts: (profile.bank_accounts || []).map(account => ({
+        ...account,
+        account_number: account.account_number_masked,
+        ifsc: account.ifsc_code
+      }))
+    }));
+    setWallet({
+      wallet_id: walletData.wallet_id,
+      citizen_id: walletData.citizen_id,
+      currency: walletData.currency_code,
+      available_balance: Number(walletData.available_balance),
+      held_balance: Number(walletData.held_balance),
+      total_balance: Number(walletData.total_balance),
+      today_spent: Number(walletData.today_spent),
+      month_spent: Number(walletData.month_spent),
+      max_balance: Number(walletData.max_balance),
+      last_updated: walletData.updated_at
+    });
+    setTransactions((transactionsResponse?.data || []).map(mapWalletTransaction));
+    setHolds((holdsResponse?.data || []).map(hold => ({
+      ...hold,
+      status: hold.status === 'ACTIVE' ? 'HELD' : hold.status,
+      held_amount: Number(hold.amount),
+      business_ref: hold.reason_code,
+      module: 'Escrow',
+      purpose: hold.reason_code,
+      splits: []
+    })));
+    setAddresses(profile.addresses || []);
+    setBankAccounts(profile.bank_accounts || []);
+    setProfileHistory((historyResponse?.data || []).map(entry => ({
+      ...entry,
+      changed_field: Object.keys(entry.changed_fields || {}).join(', ')
+    })));
+    setConsents((consentResponse?.data || []).map(consent => ({
+      ...consent,
+      service_id: consent.consent_type,
+      service_name: consent.consent_type,
+      description: consent.purpose,
+      data_points: [],
+      granted_at: consent.captured_at
+    })));
+    setSessions((sessionResponse?.data || []).map(session => ({
+      id: session.id,
+      device_name: session.device_label || 'Web browser',
+      device_type: 'browser',
+      ip_address: session.ip_address || 'Not reported',
+      location: 'Unknown location',
+      last_active: session.created_at,
+      issued_at: session.created_at,
+      current: session.is_current
+    })));
+    setLanguage(profile.preferred_language || 'en');
     setActiveSurface('CITIZEN');
     setActiveTab('dashboard');
     setIsAuthModalOpen(false);
-    recordEvent(
-      "UserAuthenticated",
-      "AUTH-LOGIN",
-      { citizen_id: loginData?.citizen_id || citizen.citizen_id, method: loginData?.method || 'PASSWORD' },
-      `Citizen authenticated successfully via ${loginData?.method || 'PASSWORD'} in 420ms`,
-      "Registration & Login"
-    );
+    setIsLoggedIn(true);
   };
 
   const handleRegisterSuccess = (account) => {
@@ -202,7 +312,7 @@ export default function App() {
   };
 
   // Citizen Transfer Handler (WAL-FR-04)
-  const handlePerformTransfer = (transferData) => {
+  const handlePerformTransfer = async (transferData) => {
     // Check if amount exceeds MFA step-up threshold
     if (transferData.amount >= (citizen.mfa_threshold_amount || 10000)) {
       setPendingMfaAction({
@@ -210,13 +320,23 @@ export default function App() {
         data: transferData
       });
       setIsMfaModalOpen(true);
-      return;
+      return { requiresMfa: true };
     }
 
-    executeTransferCommit(transferData);
+    return executeTransferCommit(transferData);
   };
 
-  const executeTransferCommit = (transferData) => {
+  const executeTransferCommit = async (transferData) => {
+    const response = await walletService.transfer(
+      transferData.recipientId,
+      transferData.amount,
+      transferData.description,
+      transferData.idempotencyKey
+    );
+    if (!response?.success) {
+      throw new Error(response?.message || 'The wallet did not confirm this transfer.');
+    }
+
     setWallet(prev => ({
       ...prev,
       available_balance: prev.available_balance - transferData.amount,
@@ -227,17 +347,17 @@ export default function App() {
     }));
 
     const newTx = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      business_ref: transferData.businessRef,
+      id: response.transaction_id,
+      business_ref: transferData.businessRef || response.transaction_id,
       type: "DEBIT",
       category: "Direct Transfer",
       purpose_code: transferData.purposeCode,
       amount: transferData.amount,
       fee: 0.00,
       net_amount: transferData.amount,
-      counterparty: transferData.recipientName,
-      timestamp: new Date().toISOString(),
-      status: "COMPLETED",
+      counterparty: response.recipient_name || transferData.recipientName,
+      timestamp: response.created_at,
+      status: response.status === 'POSTED' ? 'COMPLETED' : response.status,
       description: transferData.description,
       idempotency_key: transferData.idempotencyKey
     };
@@ -249,10 +369,20 @@ export default function App() {
       { amount: transferData.amount, recipient: transferData.recipientId, purpose: transferData.purposeCode },
       `Atomic transfer of INR ${transferData.amount} to ${transferData.recipientName} (${transferData.purposeCode})`
     );
+    return response;
   };
 
   // Top-Up Handler (WAL-FR-02)
-  const handleTopupSuccess = (topupData) => {
+  const handleTopupSuccess = async (topupData) => {
+    const response = await walletService.topup(
+      topupData.amount,
+      topupData.method,
+      topupData.provider_reference
+    );
+    if (!response?.success) {
+      throw new Error(response?.message || 'The wallet did not confirm this top-up.');
+    }
+
     setWallet(prev => ({
       ...prev,
       available_balance: prev.available_balance + topupData.amount,
@@ -261,8 +391,8 @@ export default function App() {
     }));
 
     const newTx = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      business_ref: topupData.business_ref,
+      id: response.transaction_id,
+      business_ref: topupData.provider_reference,
       type: "TOPUP",
       category: "Wallet Top-up",
       purpose_code: "CITIZEN_TOPUP_UPI",
@@ -271,18 +401,19 @@ export default function App() {
       net_amount: topupData.amount,
       counterparty: `Payment Gateway (${topupData.method})`,
       timestamp: new Date().toISOString(),
-      status: "COMPLETED",
+      status: response.status === 'POSTED' ? 'COMPLETED' : response.status,
       description: `Instant INR top-up via ${topupData.channel}`,
-      idempotency_key: topupData.idempotency_key
+      idempotency_key: ''
     };
     setTransactions(prev => [newTx, ...prev]);
 
     recordEvent(
       "WalletCredited",
-      topupData.business_ref,
+      topupData.provider_reference,
       { amount: topupData.amount, channel: topupData.channel },
       `Wallet credited with INR ${topupData.amount} following signed webhook confirmation`
     );
+    return response;
   };
 
   // Cash-Out Handlers (WAL-FR-07)
@@ -292,34 +423,43 @@ export default function App() {
     setIsPinModalOpen(true);
   };
 
-  const handlePinSuccessForCashout = () => {
+  const handlePinSuccessForCashout = async () => {
     if (!pendingCashoutData) return;
     const { amount, fee, bank, business_ref } = pendingCashoutData;
     const totalDebit = amount + fee;
+    const idempotencyKey = `cashout-${Date.now()}`;
+    const response = await walletService.cashout(
+      totalDebit,
+      `${bank.bank_name} ${bank.account_number || bank.account_number_masked}`,
+      idempotencyKey
+    );
+    if (!response?.success) {
+      throw new Error(response?.message || 'The wallet did not confirm this cash-out.');
+    }
 
     setWallet(prev => ({
       ...prev,
       available_balance: prev.available_balance - totalDebit,
       total_balance: prev.total_balance - totalDebit,
-      today_spent: prev.today_spent + amount,
-      month_spent: prev.month_spent + amount,
+      today_spent: prev.today_spent + totalDebit,
+      month_spent: prev.month_spent + totalDebit,
       last_updated: new Date().toISOString()
     }));
 
     const newTx = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      business_ref,
+      id: response.transaction_id,
+      business_ref: business_ref || response.transaction_id,
       type: "PAYOUT",
       category: "Bank Cash-out",
       purpose_code: "WALLET_CASHOUT_BANK",
-      amount,
-      fee,
-      net_amount: amount - fee,
+      amount: totalDebit,
+      fee: 0,
+      net_amount: totalDebit,
       counterparty: `${bank.bank_name} (${bank.account_number})`,
-      timestamp: new Date().toISOString(),
-      status: "COMPLETED",
+      timestamp: response.created_at,
+      status: response.status === 'POSTED' ? 'COMPLETED' : response.status,
       description: `IMPS withdrawal to verified bank account`,
-      idempotency_key: `idem-cashout-${Date.now()}`
+      idempotency_key: idempotencyKey
     };
     setTransactions(prev => [newTx, ...prev]);
 
@@ -331,81 +471,55 @@ export default function App() {
     );
 
     setPendingCashoutData(null);
+    return response;
   };
 
   // Hold Release & Refund Handlers (WAL-FR-05 & 06)
-  const handleReleaseHold = (holdId) => {
+  const returnHoldFunds = async (holdId, eventType, actionLabel) => {
     const hold = holds.find(h => h.id === holdId);
     if (!hold) return;
 
-    setHolds(prev => prev.map(h => h.id === holdId ? { ...h, status: 'RELEASED' } : h));
-    setWallet(prev => ({
-      ...prev,
-      held_balance: Math.max(0, prev.held_balance - hold.held_amount),
-      last_updated: new Date().toISOString()
-    }));
+    setOperationError(null);
+    try {
+      const response = await walletService.releaseHold(holdId);
+      if (!response?.success) {
+        throw new Error(response?.message || `Could not ${actionLabel.toLowerCase()} this hold.`);
+      }
 
-    const newTx = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      business_ref: hold.business_ref,
-      type: "RELEASE",
-      category: "Escrow Split Release",
-      purpose_code: "ESCROW_SPLIT_SETTLEMENT",
-      amount: hold.held_amount,
-      fee: 0.00,
-      net_amount: hold.held_amount,
-      counterparty: "Split Beneficiaries",
-      timestamp: new Date().toISOString(),
-      status: "COMPLETED",
-      description: `Atomic release to ${hold.splits.length} split recipients `,
-      idempotency_key: `idem-release-${holdId}`
-    };
-    setTransactions(prev => [newTx, ...prev]);
+      const amount = Number(response.amount);
+      setHolds(prev => prev.map(item => (
+        item.id === holdId ? { ...item, status: response.status } : item
+      )));
+      setWallet(prev => ({
+        ...prev,
+        available_balance: prev.available_balance + amount,
+        held_balance: Math.max(0, prev.held_balance - amount),
+        last_updated: response.created_at || new Date().toISOString()
+      }));
+      setTransactions(prev => [{
+        id: response.transaction_id,
+        business_ref: hold.business_ref,
+        transaction_type: 'RELEASE',
+        direction: 'CREDIT',
+        amount,
+        created_at: response.created_at,
+        status: 'POSTED',
+        description: `${actionLabel}: ${hold.business_ref}`
+      }, ...prev]);
 
-    recordEvent(
-      "FundsReleased",
-      hold.business_ref,
-      { hold_id: holdId, released_amount: hold.held_amount, splits_count: hold.splits.length },
-      `Released hold ${holdId} for ${hold.business_ref} with atomic split settlement `
-    );
+      recordEvent(
+        eventType,
+        hold.business_ref,
+        { hold_id: holdId, amount },
+        `${actionLabel} for hold ${holdId} (${hold.business_ref})`
+      );
+    } catch (error) {
+      setOperationError(error.message || `Could not ${actionLabel.toLowerCase()} this hold.`);
+    }
   };
 
-  const handleRefundHold = (holdId) => {
-    const hold = holds.find(h => h.id === holdId);
-    if (!hold) return;
-
-    setHolds(prev => prev.map(h => h.id === holdId ? { ...h, status: 'REFUNDED' } : h));
-    setWallet(prev => ({
-      ...prev,
-      available_balance: prev.available_balance + hold.held_amount,
-      held_balance: Math.max(0, prev.held_balance - hold.held_amount),
-      last_updated: new Date().toISOString()
-    }));
-
-    const newTx = {
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
-      business_ref: hold.business_ref,
-      type: "CREDIT",
-      category: "Escrow Refund",
-      purpose_code: "ESCROW_EXPIRED_REFUND",
-      amount: hold.held_amount,
-      fee: 0.00,
-      net_amount: hold.held_amount,
-      counterparty: "Escrow Ledger Account",
-      timestamp: new Date().toISOString(),
-      status: "COMPLETED",
-      description: `Full refund of expired escrow hold`,
-      idempotency_key: `idem-refund-${holdId}`
-    };
-    setTransactions(prev => [newTx, ...prev]);
-
-    recordEvent(
-      "FundsRefunded",
-      hold.business_ref,
-      { hold_id: holdId, refunded_amount: hold.held_amount },
-      `Expired hold ${holdId} refunded in full back to citizen available balance`
-    );
-  };
+  const handleReleaseHold = (holdId) => returnHoldFunds(holdId, 'FundsReleased', 'Hold released');
+  const handleRefundHold = (holdId) => returnHoldFunds(holdId, 'FundsRefunded', 'Expired hold refunded');
 
   // Raise Dispute (WAL-FR-10)
   const handleRaiseDispute = (disputeData) => {
@@ -435,21 +549,21 @@ export default function App() {
 
 
   // Address Management Handlers
-  const handleAddAddress = (newAddr) => {
+  const handleAddAddress = async (newAddr) => {
     const created = {
       ...newAddr,
       id: `ADDR-${Date.now().toString().slice(-4)}`
     };
-    if (created.is_default) {
-      setAddresses(prev => prev.map(a => ({ ...a, is_default: false })).concat(created));
-    } else {
-      setAddresses(prev => [...prev, created]);
-    }
+    const nextAddresses = created.is_default
+      ? addresses.map(a => ({ ...a, is_default: false })).concat(created)
+      : [...addresses, created];
+    const response = await citizenService.updateProfile({ addresses: nextAddresses });
+    setAddresses(response.data.addresses || []);
     recordEvent("AddressAdded", created.id, created, `Citizen added address: ${created.address_label || created.address_type}`, "Profile & KYC");
   };
 
-  const handleUpdateAddress = (addrId, updatedData) => {
-    setAddresses(prev => prev.map(a => {
+  const handleUpdateAddress = async (addrId, updatedData) => {
+    const nextAddresses = addresses.map(a => {
       if (a.id === addrId) {
         return { ...a, ...updatedData };
       }
@@ -457,46 +571,89 @@ export default function App() {
         return { ...a, is_default: false };
       }
       return a;
-    }));
+    });
+    const response = await citizenService.updateProfile({ addresses: nextAddresses });
+    setAddresses(response.data.addresses || []);
     recordEvent("AddressUpdated", addrId, updatedData, `Citizen updated address: ${addrId}`, "Profile & KYC");
   };
 
-  const handleDeleteAddress = (addrId) => {
-    setAddresses(prev => prev.filter(a => a.id !== addrId));
+  const handleDeleteAddress = async (addrId) => {
+    const nextAddresses = addresses.filter(a => a.id !== addrId);
+    const response = await citizenService.updateProfile({ addresses: nextAddresses });
+    setAddresses(response.data.addresses || []);
     recordEvent("AddressDeleted", addrId, {}, `Citizen removed address: ${addrId}`, "Profile & KYC");
   };
 
-  const handleSetDefaultAddress = (addrId) => {
-    setAddresses(prev => prev.map(a => ({
+  const handleSetDefaultAddress = async (addrId) => {
+    const nextAddresses = addresses.map(a => ({
       ...a,
       is_default: a.id === addrId
-    })));
+    }));
+    const response = await citizenService.updateProfile({ addresses: nextAddresses });
+    setAddresses(response.data.addresses || []);
   };
 
   // Bank Account Management Handlers
-  const handleAddBankAccount = (newAccount) => {
-    if (newAccount.is_primary) {
-      setBankAccounts(prev => prev.map(b => ({ ...b, is_primary: false })).concat(newAccount));
-    } else {
-      setBankAccounts(prev => [...prev, newAccount]);
-    }
+  const handleAddBankAccount = async (newAccount) => {
+    const nextAccounts = newAccount.is_primary
+      ? bankAccounts.map(b => ({ ...b, is_primary: false })).concat(newAccount)
+      : [...bankAccounts, newAccount];
+    const response = await citizenService.updateProfile({ bank_accounts: nextAccounts });
+    setBankAccounts(response.data.bank_accounts || []);
+    setCitizen(prev => ({
+      ...prev,
+      verified_bank_accounts: (response.data.bank_accounts || []).map(account => ({
+        ...account,
+        account_number: account.account_number_masked,
+        ifsc: account.ifsc_code
+      }))
+    }));
     recordEvent("BankAccountLinked", newAccount.id, newAccount, `Citizen linked bank account: ${newAccount.bank_name}`, "Citizen Wallet");
   };
 
-  const handleDeleteBankAccount = (bankId) => {
-    setBankAccounts(prev => prev.filter(b => b.id !== bankId));
+  const handleDeleteBankAccount = async (bankId) => {
+    const nextAccounts = bankAccounts.filter(b => b.id !== bankId);
+    const response = await citizenService.updateProfile({ bank_accounts: nextAccounts });
+    setBankAccounts(response.data.bank_accounts || []);
+    setCitizen(prev => ({
+      ...prev,
+      verified_bank_accounts: (response.data.bank_accounts || []).map(account => ({
+        ...account,
+        account_number: account.account_number_masked,
+        ifsc: account.ifsc_code
+      }))
+    }));
     recordEvent("BankAccountRemoved", bankId, {}, `Citizen removed bank account: ${bankId}`, "Citizen Wallet");
   };
 
-  const handleSetDefaultBankAccount = (bankId) => {
-    setBankAccounts(prev => prev.map(b => ({
+  const handleSetDefaultBankAccount = async (bankId) => {
+    const nextAccounts = bankAccounts.map(b => ({
       ...b,
       is_primary: b.id === bankId
-    })));
+    }));
+    const response = await citizenService.updateProfile({ bank_accounts: nextAccounts });
+    setBankAccounts(response.data.bank_accounts || []);
+    setCitizen(prev => ({
+      ...prev,
+      verified_bank_accounts: (response.data.bank_accounts || []).map(account => ({
+        ...account,
+        account_number: account.account_number_masked,
+        ifsc: account.ifsc_code
+      }))
+    }));
   };
 
   // Profile Update (CID-FR-05)
-  const handleUpdateProfile = (updatedProfile) => {
+  const handleUpdateProfile = async (updatedProfile) => {
+    const response = await citizenService.updateProfile({
+      full_name: updatedProfile.full_name,
+      email: updatedProfile.email,
+      mobile: updatedProfile.mobile,
+      preferred_language: updatedProfile.language,
+      date_of_birth: updatedProfile.date_of_birth,
+      gender: updatedProfile.gender
+    });
+    const savedProfile = response.data;
     // Determine changed field for history
     const changedField = updatedProfile.address !== citizen.address ? "Address" 
       : updatedProfile.mobile !== citizen.mobile ? "Mobile" 
@@ -512,7 +669,14 @@ export default function App() {
       ip_address: "49.36.128.44"
     };
 
-    setCitizen(prev => ({ ...prev, ...updatedProfile }));
+    setCitizen(prev => ({
+      ...prev,
+      ...updatedProfile,
+      ...savedProfile,
+      email: savedProfile.email,
+      mobile: savedProfile.mobile,
+      language: savedProfile.preferred_language
+    }));
     setProfileHistory(prev => [newHistory, ...prev]);
 
     recordEvent(
@@ -522,6 +686,16 @@ export default function App() {
       `Citizen updated profile field: ${changedField}`,
       "Profile & KYC"
     );
+    return savedProfile;
+  };
+
+  const handleUpdateWalletLimit = async (maxBalance) => {
+    const response = await walletService.updateWalletLimit(maxBalance);
+    const updatedLimit = Number(response?.data?.max_balance);
+    if (!Number.isFinite(updatedLimit)) {
+      throw new Error('The server did not confirm the updated wallet limit.');
+    }
+    setWallet(prev => ({ ...prev, max_balance: updatedLimit }));
   };
 
   // Switch Persona (CID-FR-09)
@@ -563,49 +737,65 @@ export default function App() {
   };
 
   // Consent Toggle (CID-FR-12)
-  const handleToggleConsent = (consentId, granted) => {
-    setConsents(prev => prev.map(c => {
-      if (c.id === consentId) {
-        return {
-          ...c,
-          granted,
-          granted_at: granted ? new Date().toISOString() : c.granted_at,
-          withdrawn_at: !granted ? new Date().toISOString() : null
-        };
-      }
-      return c;
-    }));
-
-    recordEvent(
-      granted ? "ConsentGranted" : "ConsentWithdrawn",
-      consentId,
-      { consent_id: consentId, granted },
-      `Citizen ${granted ? 'granted' : 'withdrew'} data access for service`,
-      "Access, Consent & Audit"
-    );
+  const handleToggleConsent = async (consentId, granted) => {
+    try {
+      const response = await citizenService.updateConsent(consentId, granted);
+      setConsents(prev => prev.map(consent => (
+        consent.id === consentId
+          ? {
+            ...consent,
+            ...response,
+            service_id: response.consent_type,
+            service_name: response.consent_type,
+            description: response.purpose,
+            data_points: [],
+            granted_at: response.captured_at
+          }
+          : consent
+      )));
+      recordEvent(
+        granted ? "ConsentGranted" : "ConsentWithdrawn",
+        consentId,
+        { consent_id: consentId, granted },
+        `Citizen ${granted ? 'granted' : 'withdrew'} data access for service`,
+        "Access, Consent & Audit"
+      );
+    } catch (error) {
+      setOperationError(error.message || 'Could not update consent.');
+    }
   };
 
   // Revoke Session (CID-FR-03)
-  const handleRevokeSession = (sessionId) => {
-    setSessions(prev => prev.filter(s => s.id !== sessionId));
-    recordEvent(
-      "SessionRevoked",
-      sessionId,
-      { session_id: sessionId },
-      `Session revoked. Refresh token rotated & placed in deny-list `,
-      "Registration & Login"
-    );
+  const handleRevokeSession = async (sessionId) => {
+    try {
+      await citizenService.revokeSession(sessionId);
+      setSessions(prev => prev.filter(session => session.id !== sessionId));
+      recordEvent(
+        "SessionRevoked",
+        sessionId,
+        { session_id: sessionId },
+        `Session revoked. Refresh token rotated & placed in deny-list `,
+        "Registration & Login"
+      );
+    } catch (error) {
+      setOperationError(error.message || 'Could not revoke this session.');
+    }
   };
 
-  const handleRevokeAllOtherSessions = () => {
-    setSessions(prev => prev.filter(s => s.current));
-    recordEvent(
-      "AllOtherSessionsRevoked",
-      "BULK-REVOKE",
-      { citizen_id: citizen.citizen_id },
-      `Revoked all other devices. Tokens pushed to deny-list `,
-      "Registration & Login"
-    );
+  const handleRevokeAllOtherSessions = async () => {
+    try {
+      await citizenService.revokeOtherSessions();
+      setSessions(prev => prev.filter(session => session.current));
+      recordEvent(
+        "AllOtherSessionsRevoked",
+        "BULK-REVOKE",
+        { citizen_id: citizen.citizen_id },
+        `Revoked all other devices. Tokens pushed to deny-list `,
+        "Registration & Login"
+      );
+    } catch (error) {
+      setOperationError(error.message || 'Could not revoke other sessions.');
+    }
   };
 
   // Voice Assistant Execution (S07)
@@ -766,6 +956,11 @@ export default function App() {
 
       {/* Main Body Surface */}
       <main className={`app-content ${isLoggedIn ? '' : 'app-content-auth'}`}>
+        {operationError && (
+          <div className="alert-callout danger" role="alert">
+            {operationError}
+          </div>
+        )}
         {activeSurface === 'CITIZEN' ? (
           !isLoggedIn ? (
             <HomePage 
@@ -968,9 +1163,9 @@ export default function App() {
         isOpen={isTopupModalOpen}
         onClose={() => setIsTopupModalOpen(false)}
         wallet={wallet}
-        citizen={citizen}
         tierLimits={tierLimits}
         onTopupSuccess={handleTopupSuccess}
+        onUpdateWalletLimit={handleUpdateWalletLimit}
       />
 
       <WalletCashoutModal
@@ -1008,10 +1203,15 @@ export default function App() {
       <MfaModal
         isOpen={isMfaModalOpen}
         onClose={() => setIsMfaModalOpen(false)}
-        onVerified={() => {
+        onVerified={async () => {
           if (pendingMfaAction?.type === 'TRANSFER') {
-            executeTransferCommit(pendingMfaAction.data);
-            setPendingMfaAction(null);
+            try {
+              await executeTransferCommit(pendingMfaAction.data);
+              setPendingMfaAction(null);
+              setOperationError(null);
+            } catch (error) {
+              throw new Error(error.message || 'Transfer failed. Please try again.');
+            }
           }
         }}
         actionTitle="High-Value Wallet Transfer"

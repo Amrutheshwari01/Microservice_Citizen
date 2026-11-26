@@ -26,17 +26,21 @@ export default function HomePage({
   const googleLoginRef = useRef(null);
   const googleInitializedRef = useRef(false);
 
-  const finishLogin = useCallback((response, method) => {
-    setFeedback({ type: 'success', text: 'Signed in successfully.' });
-    onLoginSuccess({
-      citizen_id: response.citizen_id,
-      full_name: response.full_name || 'Citizen',
-      email: response.email || identifier,
-      mobile: response.mobile || '',
-      active_persona: response.active_persona || 'CUSTOMER',
-      kyc_tier: response.kyc_tier || 'T0',
-      method
-    });
+  const finishLogin = useCallback(async (response, method) => {
+    try {
+      await onLoginSuccess({
+        citizen_id: response.citizen_id,
+        full_name: response.full_name || 'Citizen',
+        email: response.email || identifier,
+        mobile: response.mobile || '',
+        active_persona: response.active_persona || 'CUSTOMER',
+        kyc_tier: response.kyc_tier || 'T0',
+        method
+      });
+      setFeedback({ type: 'success', text: 'Signed in successfully.' });
+    } catch (error) {
+      setFeedback({ type: 'error', text: error.message || 'Account data could not be loaded.' });
+    }
   }, [identifier, onLoginSuccess]);
 
   const handleGoogleCredential = useCallback(async (credential) => {
@@ -49,7 +53,7 @@ export default function HomePage({
     setFeedback(null);
     try {
       const response = await authService.loginWithGoogle(credential);
-      finishLogin(response, 'GOOGLE');
+      await finishLogin(response, 'GOOGLE');
     } catch (error) {
       setFeedback({ type: 'error', text: error.message || 'Google sign-in failed. Please try again.' });
     } finally {
@@ -118,7 +122,7 @@ export default function HomePage({
     setFeedback(null);
     try {
       const response = await authService.login(identifier, password);
-      finishLogin(response, 'PASSWORD');
+      await finishLogin(response, 'PASSWORD');
     } catch (error) {
       setFeedback({ type: 'error', text: error.message || 'Sign-in failed. Check your details and try again.' });
     } finally {
@@ -131,7 +135,7 @@ export default function HomePage({
     setFeedback(null);
     try {
       const response = await authService.loginWithFace(faceImage);
-      finishLogin(response, 'BIOMETRIC_FACE');
+      await finishLogin(response, 'BIOMETRIC_FACE');
     } catch (error) {
       setFeedback({ type: 'error', text: error.message || 'Face recognition failed. Please try again.' });
     } finally {

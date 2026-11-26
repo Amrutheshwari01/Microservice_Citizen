@@ -30,6 +30,11 @@ export default function WalletCashoutModal({
     e.preventDefault();
     const numAmount = parseFloat(amount);
 
+    if (!selectedBank) {
+      setError('Link a verified bank account before requesting a cash-out.');
+      return;
+    }
+
     if (isNaN(numAmount) || numAmount <= 0) {
       setError('Please enter a valid cash-out withdrawal amount.');
       return;
@@ -103,7 +108,7 @@ export default function WalletCashoutModal({
                       <input 
                         type="radio" 
                         name="bank-select" 
-                        checked={selectedBankId === bank.id} 
+                        checked={selectedBank?.id === bank.id}
                         onChange={() => setSelectedBankId(bank.id)}
                       />
                       <div>

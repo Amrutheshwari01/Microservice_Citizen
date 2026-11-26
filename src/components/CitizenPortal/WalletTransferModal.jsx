@@ -35,7 +35,7 @@ export default function WalletTransferModal({
     setIdempotencyKey(`idem-${Math.random().toString(36).substring(2, 10)}`);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
 
@@ -60,9 +60,10 @@ export default function WalletTransferModal({
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onPerformTransfer({
+    setError('');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 600));
+      await onPerformTransfer({
         recipientId,
         recipientName,
         amount: numAmount,
@@ -72,7 +73,11 @@ export default function WalletTransferModal({
         description: description || `Transfer for ${purposeCode}`
       });
       onClose();
-    }, 600);
+    } catch (requestError) {
+      setError(requestError.message || 'Transfer failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

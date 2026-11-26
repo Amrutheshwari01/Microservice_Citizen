@@ -20,6 +20,7 @@ class WalletSummaryResponse(BaseModel):
     total_balance: str  # available + held
     today_spent: str  # Derived from ledger
     month_spent: str  # Derived from ledger
+    max_balance: str
     updated_at: str
 
     model_config = {"from_attributes": True}
@@ -81,6 +82,19 @@ class TopupRequest(BaseModel):
         if v <= 0:
             raise ValueError("Top-up amount must be positive")
         return v
+
+
+class WalletLimitUpdateRequest(BaseModel):
+    max_balance: Decimal = Field(
+        ..., gt=0, description="Personal maximum wallet balance"
+    )
+
+    @field_validator("max_balance")
+    @classmethod
+    def validate_max_balance(cls, value: Decimal) -> Decimal:
+        if value.as_tuple().exponent < -4:
+            raise ValueError("Maximum balance cannot have more than 4 decimal places")
+        return value
 
 
 class CashoutRequest(BaseModel):

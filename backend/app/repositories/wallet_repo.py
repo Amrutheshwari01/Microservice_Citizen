@@ -27,6 +27,7 @@ from app.core.exceptions import (
     IdempotencyConflictException,
     BadRequestException,
 )
+from app.core.wallet_limits import get_effective_max_balance
 
 
 class WalletRepository:
@@ -250,6 +251,14 @@ class WalletRepository:
         if not wallet or wallet.status != "ACTIVE":
             raise BadRequestException("Wallet is not active or does not exist")
 
+        if transaction_type in {"TOPUP", "ADJUSTMENT"}:
+            held = self.get_held_balance(wallet_id)
+            maximum = get_effective_max_balance(self.db, wallet.citizen_id)
+            if wallet.available_balance + held + amount > maximum:
+                raise BadRequestException(
+                    f"Credit would exceed the configured wallet balance limit of ₹{maximum}."
+                )
+
         # Create transaction record
         tx = self._create_transaction(
             wallet_id=wallet_id,
@@ -356,6 +365,12 @@ class WalletRepository:
             raise BadRequestException("Recipient wallet is not active")
         if sender_wallet_id == recipient_wallet_id:
             raise BadRequestException("Cannot transfer to the same wallet")
+        recipient_held = self.get_held_balance(recipient_wallet_id)
+        recipient_maximum = get_effective_max_balance(self.db, recipient.citizen_id)
+        if recipient.available_balance + recipient_held + amount > recipient_maximum:
+            raise BadRequestException(
+                f"Transfer would exceed the recipient's wallet balance limit of ₹{recipient_maximum}."
+            )
         if sender.available_balance < amount:
             raise InsufficientFundsException(
                 f"Insufficient balance. Available: ₹{sender.available_balance}, Required: ₹{amount}"
@@ -470,7 +485,9 @@ class WalletRepository:
         refund_to_wallet: bool = True,
         initiated_by_citizen_id: Optional[uuid.UUID] = None,
     ) -> Tuple[WalletTransaction, WalletHold]:
-        hold = self.get_hold_by_id(hold_id)
+        hold = self.db.execute(
+            select(WalletHold).where(WalletHold.id == hold_id).with_for_update()
+        ).scalar_one_or_none()
         if not hold or hold.status != "ACTIVE":
             raise BadRequestException("Hold is not active or does not exist")
 

@@ -107,6 +107,90 @@ class TestProfile:
         assert len(history) >= 1
         assert "city" in history[0]["changed_fields"]
 
+    def test_profile_and_linked_accounts_persist_after_sign_in(self):
+        reg = _register_citizen()
+        token = _login(reg["email"])["access_token"]
+        profile_updates = {
+            "gender": "Other",
+            "addresses": [
+                {
+                    "id": "ADDR-1",
+                    "city_town": "Mysore",
+                    "postal_code": "570001",
+                    "is_default": True,
+                }
+            ],
+            "bank_accounts": [
+                {
+                    "id": "BANK-1",
+                    "bank_name": "Test Bank",
+                    "account_number_masked": "•••• 1234",
+                    "ifsc_code": "TEST0001234",
+                    "is_primary": True,
+                }
+            ],
+        }
+        response = client.patch(
+            "/api/v1/citizens/me",
+            json=profile_updates,
+            headers=_auth_headers(token),
+        )
+        assert response.status_code == 200, response.text
+
+        relogin_token = _login(reg["email"])["access_token"]
+        saved = client.get(
+            "/api/v1/citizens/me", headers=_auth_headers(relogin_token)
+        ).json()["data"]
+        assert saved["gender"] == "Other"
+        assert saved["addresses"] == profile_updates["addresses"]
+        assert saved["bank_accounts"] == profile_updates["bank_accounts"]
+
+    def test_wallet_limit_persists_and_is_enforced_for_topups(self):
+        reg = _register_citizen()
+        token = _login(reg["email"])["access_token"]
+
+        initial = client.get("/api/v1/wallets/me", headers=_auth_headers(token))
+        assert initial.status_code == 200, initial.text
+        assert initial.json()["data"]["max_balance"] == "10000"
+
+        limit_response = client.patch(
+            "/api/v1/wallets/me/limit",
+            json={"max_balance": "5000"},
+            headers=_auth_headers(token),
+        )
+        assert limit_response.status_code == 200, limit_response.text
+
+        topup = client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "5000",
+                "provider_name": "UPI",
+                "provider_reference": "TEST-TOPUP-1",
+                "idempotency_key": f"test-topup-{uuid.uuid4().hex[:12]}",
+            },
+            headers=_auth_headers(token),
+        )
+        assert topup.status_code == 201, topup.text
+
+        over_limit = client.post(
+            "/api/v1/wallets/topup",
+            json={
+                "amount": "1",
+                "provider_name": "UPI",
+                "provider_reference": "TEST-TOPUP-2",
+                "idempotency_key": f"test-topup-{uuid.uuid4().hex[:12]}",
+            },
+            headers=_auth_headers(token),
+        )
+        assert over_limit.status_code == 400, over_limit.text
+
+        relogin_token = _login(reg["email"])["access_token"]
+        saved_wallet = client.get(
+            "/api/v1/wallets/me", headers=_auth_headers(relogin_token)
+        ).json()["data"]
+        assert saved_wallet["max_balance"] == "5000"
+        assert saved_wallet["available_balance"] == "5000.0000"
+
     def test_unauthenticated_profile_returns_401(self):
         res = client.get("/api/v1/citizens/me")
         assert res.status_code == 401

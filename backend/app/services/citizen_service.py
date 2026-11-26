@@ -1,4 +1,5 @@
 import hashlib
+import re
 import uuid
 import logging
 from datetime import datetime
@@ -12,6 +13,7 @@ from app.core.exceptions import (
     NotFoundException,
     ConflictException,
 )
+from app.core.wallet_limits import get_effective_max_balance, get_kyc_max_balance
 from app.repositories.citizen_repo import CitizenRepository
 from app.repositories.profile_repo import CitizenProfileRepository
 from app.repositories.persona_repo import PersonaRepository
@@ -30,6 +32,7 @@ from app.schemas.wallet import (
     TransferRequest,
     TopupRequest,
     CashoutRequest,
+    WalletLimitUpdateRequest,
     InternalWalletHoldRequest,
     InternalWalletCreditRequest,
     InternalWalletDebitRequest,
@@ -74,6 +77,9 @@ class CitizenService:
             "country_code": profile.country_code if profile else "IN",
             "preferred_language": profile.preferred_language if profile else "en",
             "profile_photo_ref": profile.profile_photo_ref if profile else None,
+            "gender": profile.gender if profile else None,
+            "addresses": profile.addresses if profile else [],
+            "bank_accounts": profile.bank_accounts if profile else [],
             "active_personas": active_personas,
             "wallet_id": wallet.id if wallet else None,
             "wallet_status": wallet.status if wallet else None,
@@ -95,6 +101,32 @@ class CitizenService:
             citizen.updated_at = datetime.utcnow()
             update_fields["full_name"] = req.full_name
 
+        if req.email is not None:
+            email = req.email.strip().lower()
+            existing = self.citizen_repo.get_by_email(email)
+            if existing and existing.id != citizen.id:
+                raise ConflictException("This email address is already in use.")
+            if email != citizen.email_normalized:
+                citizen.email_normalized = email
+                citizen.email_verified_at = None
+                citizen.updated_at = datetime.utcnow()
+                update_fields["email"] = email
+
+        if req.mobile is not None:
+            mobile = re.sub(r"\s+", "", req.mobile)
+            if not re.fullmatch(r"\+[1-9]\d{7,14}", mobile):
+                raise BadRequestException(
+                    "Mobile number must use international E.164 format."
+                )
+            existing = self.citizen_repo.get_by_mobile(mobile)
+            if existing and existing.id != citizen.id:
+                raise ConflictException("This mobile number is already in use.")
+            if mobile != citizen.mobile_e164:
+                citizen.mobile_e164 = mobile
+                citizen.mobile_verified_at = None
+                citizen.updated_at = datetime.utcnow()
+                update_fields["mobile"] = mobile
+
         # Profile-level fields
         profile_map = {
             "preferred_language": req.preferred_language,
@@ -106,6 +138,17 @@ class CitizenService:
             "state_region": req.state_region,
             "postal_code": req.postal_code,
             "country_code": req.country_code,
+            "gender": req.gender,
+            "addresses": (
+                [address.model_dump(exclude_none=True) for address in req.addresses]
+                if req.addresses is not None
+                else None
+            ),
+            "bank_accounts": (
+                [account.model_dump(exclude_none=True) for account in req.bank_accounts]
+                if req.bank_accounts is not None
+                else None
+            ),
         }
         profile_updates = {k: v for k, v in profile_map.items() if v is not None}
 
@@ -399,7 +442,7 @@ class WalletService:
         self.db = db
         self.repo = WalletRepository(db)
         self.citizen_repo = CitizenRepository(db)
-        self.kyc_repo = KycRepository(db)
+        self.profile_repo = CitizenProfileRepository(db)
 
     def get_wallet_summary(self, citizen: Citizen) -> Dict:
         wallet = self.repo.get_wallet_by_citizen(citizen.id)
@@ -420,7 +463,39 @@ class WalletService:
             "total_balance": str(wallet.available_balance + held),
             "today_spent": str(today),
             "month_spent": str(month),
+            "max_balance": str(get_effective_max_balance(self.db, citizen.id)),
             "updated_at": wallet.updated_at.isoformat(),
+        }
+
+    def update_wallet_max_balance(
+        self, citizen: Citizen, req: WalletLimitUpdateRequest
+    ) -> Dict:
+        wallet = self.repo.get_wallet_by_citizen(citizen.id, for_update=True)
+        if not wallet:
+            raise NotFoundException("No wallet found for this citizen")
+
+        kyc_max = get_kyc_max_balance(self.db, citizen.id)
+        if req.max_balance > kyc_max:
+            raise BadRequestException(
+                f"Your KYC tier allows a maximum wallet balance of ₹{kyc_max}."
+            )
+
+        current_total = wallet.available_balance + self.repo.get_held_balance(wallet.id)
+        if req.max_balance < current_total:
+            raise BadRequestException(
+                f"Maximum balance cannot be lower than your current wallet balance of ₹{current_total}."
+            )
+
+        profile = self.profile_repo.get_profile(citizen.id)
+        if not profile:
+            raise NotFoundException("Citizen profile not found")
+        profile.wallet_max_balance = req.max_balance
+        profile.updated_at = datetime.utcnow()
+        self.db.commit()
+        return {
+            "success": True,
+            "max_balance": str(req.max_balance),
+            "kyc_max_balance": str(kyc_max),
         }
 
     def get_transactions(
@@ -437,6 +512,14 @@ class WalletService:
                 "amount": str(tx.amount),
                 "currency_code": tx.currency_code,
                 "status": tx.status,
+                "direction": next(
+                    (
+                        entry.entry_type
+                        for entry in tx.ledger_entries
+                        if entry.wallet_id == wallet.id
+                    ),
+                    None,
+                ),
                 "description": tx.description,
                 "reference_type": tx.reference_type,
                 "counterparty_wallet_id": (
@@ -514,16 +597,30 @@ class WalletService:
             citizen.id, req.idempotency_key, req_hash, "TOPUP"
         )
 
-        wallet = self.repo.get_wallet_by_citizen(citizen.id)
+        wallet = self.repo.get_wallet_by_citizen(citizen.id, for_update=True)
         if not wallet:
             raise NotFoundException("Wallet not found")
 
         amount = Decimal(str(req.amount))
+        current_total = wallet.available_balance + self.repo.get_held_balance(wallet.id)
+        max_balance = get_effective_max_balance(self.db, citizen.id)
+        if current_total + amount > max_balance:
+            raise BadRequestException(
+                f"Top-up would exceed your configured maximum balance of ₹{max_balance}."
+            )
+
         tx = self.repo.credit_wallet(
             wallet_id=wallet.id,
             amount=amount,
             transaction_type="TOPUP",
-            description=f"Top-up via {req.provider_name}",
+            description=(
+                f"Top-up via {req.provider_name}"
+                + (
+                    f" (provider reference: {req.provider_reference})"
+                    if req.provider_reference
+                    else ""
+                )
+            ),
             reference_type=req.provider_name,
             initiated_by_citizen_id=citizen.id,
         )
@@ -605,7 +702,7 @@ class WalletService:
         if not hold or hold.wallet_id != wallet.id:
             raise NotFoundException("Hold not found or does not belong to this wallet")
 
-        _, released_hold = self.repo.release_hold(
+        released_tx, released_hold = self.repo.release_hold(
             hold_id=hold_id, refund_to_wallet=True
         )
         self.db.commit()
@@ -614,8 +711,10 @@ class WalletService:
             "success": True,
             "message": "Hold released and funds returned to wallet",
             "hold_id": str(hold_id),
+            "transaction_id": str(released_tx.id),
             "amount": str(released_hold.amount),
             "status": released_hold.status,
+            "created_at": released_tx.created_at.isoformat(),
         }
 
     # ── Internal microservice operations ─────────────────────────────────────

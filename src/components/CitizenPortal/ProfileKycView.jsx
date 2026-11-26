@@ -35,14 +35,16 @@ export default function ProfileKycView({
   onUpdateProfile
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSaveError, setProfileSaveError] = useState(null);
   const [formData, setFormData] = useState({
     full_name: citizen.full_name,
     email: citizen.email,
     mobile: citizen.mobile,
     nationality: citizen.nationality || 'Indian',
     language: citizen.language || 'en',
-    date_of_birth: citizen.date_of_birth || '1992-05-14',
-    gender: citizen.gender || 'Male'
+    date_of_birth: citizen.date_of_birth || '',
+    gender: citizen.gender || ''
   });
 
   // KYC Submission state
@@ -142,10 +144,18 @@ export default function ProfileKycView({
     }
   };
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
-    onUpdateProfile(formData);
-    setIsEditing(false);
+    setIsSavingProfile(true);
+    setProfileSaveError(null);
+    try {
+      await onUpdateProfile(formData);
+      setIsEditing(false);
+    } catch (error) {
+      setProfileSaveError(error.message || 'Could not save your profile.');
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleKycSubmit = async (e) => {
@@ -413,6 +423,12 @@ export default function ProfileKycView({
 
             {isEditing ? (
               <form onSubmit={handleProfileSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {profileSaveError && (
+                  <div className="alert-callout danger" role="alert">
+                    <AlertCircle size={16} />
+                    <span>{profileSaveError}</span>
+                  </div>
+                )}
                 <div>
                   <label className="form-label">Full Name</label>
                   <input 
@@ -462,6 +478,7 @@ export default function ProfileKycView({
                       value={formData.gender}
                       onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                     >
+                      <option value="">Select gender</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
@@ -472,7 +489,9 @@ export default function ProfileKycView({
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
                   <button type="button" className="secondary-btn" onClick={() => setIsEditing(false)}>Cancel</button>
-                  <button type="submit" className="primary-btn">Save Changes</button>
+                  <button type="submit" className="primary-btn" disabled={isSavingProfile}>
+                    {isSavingProfile ? 'Saving…' : 'Save Changes'}
+                  </button>
                 </div>
               </form>
             ) : (

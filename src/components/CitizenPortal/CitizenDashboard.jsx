@@ -32,11 +32,12 @@ export default function CitizenDashboard({
 }) {
   const t = TRANSLATIONS[language] || TRANSLATIONS.en;
   const tierInfo = KYC_TIERS_INFO[citizen.kyc_tier] || KYC_TIERS_INFO.T0;
+  const maxBalance = wallet.max_balance ?? tierInfo.max_balance;
 
   // Calculate percentages for limits
   const dailyPercent = Math.min(100, Math.round((wallet.today_spent / tierInfo.daily_limit) * 100));
   const monthlyPercent = Math.min(100, Math.round((wallet.month_spent / tierInfo.monthly_limit) * 100));
-  const balancePercent = Math.min(100, Math.round((wallet.total_balance / tierInfo.max_balance) * 100));
+  const balancePercent = Math.min(100, Math.round((wallet.total_balance / maxBalance) * 100));
 
   return (
     <div className="citizen-dashboard">
@@ -60,7 +61,7 @@ export default function CitizenDashboard({
             </span>
           </div>
           <div className="tier-body">
-            <strong>Max Balance: ₹{tierInfo.max_balance.toLocaleString('en-IN')}</strong>
+            <strong>Max Balance: ₹{maxBalance.toLocaleString('en-IN')}</strong>
             <p>Single Tx Limit: ₹{tierInfo.per_tx_limit.toLocaleString('en-IN')}</p>
           </div>
           <div className="tier-footer">
@@ -184,7 +185,7 @@ export default function CitizenDashboard({
             <div className="velocity-item">
               <div className="velocity-label-row">
                 <span>Wallet Balance Ceiling</span>
-                <strong>₹{wallet.total_balance.toLocaleString('en-IN')} / ₹{tierInfo.max_balance.toLocaleString('en-IN')}</strong>
+                <strong>₹{wallet.total_balance.toLocaleString('en-IN')} / ₹{maxBalance.toLocaleString('en-IN')}</strong>
               </div>
               <div className="progress-bar-bg">
                 <div 

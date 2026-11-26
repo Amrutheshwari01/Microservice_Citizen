@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List, TYPE_CHECKING
+from decimal import Decimal
+from typing import Any, Dict, Optional, List, TYPE_CHECKING
 from sqlalchemy import (
     String,
     Text,
@@ -9,6 +10,7 @@ from sqlalchemy import (
     Integer,
     Boolean,
     ForeignKey,
+    Numeric,
 )
 from sqlalchemy.dialects.postgresql import UUID, INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -98,6 +100,7 @@ class CitizenProfile(Base):
     city: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     state_region: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     postal_code: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    gender: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     country_code: Mapped[Optional[str]] = mapped_column(
         String(2), nullable=True, default="IN"
     )
@@ -105,6 +108,15 @@ class CitizenProfile(Base):
         String(20), nullable=True, default="en"
     )
     profile_photo_ref: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    addresses: Mapped[List[Dict[str, Any]]] = mapped_column(
+        JSONB, default=list, nullable=False
+    )
+    bank_accounts: Mapped[List[Dict[str, Any]]] = mapped_column(
+        JSONB, default=list, nullable=False
+    )
+    wallet_max_balance: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(19, 4), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )

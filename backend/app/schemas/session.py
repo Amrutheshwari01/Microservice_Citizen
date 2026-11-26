@@ -19,6 +19,7 @@ class SessionResponse(BaseModel):
     created_at: datetime
     expires_at: Optional[datetime] = None
     revoked_at: Optional[datetime] = None
+    is_current: bool = False
 
     model_config = {"from_attributes": True}
 

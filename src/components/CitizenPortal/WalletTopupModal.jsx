@@ -5,7 +5,6 @@ import {
   CreditCard, 
   Smartphone, 
   CheckCircle2, 
-  ExternalLink,
   ShieldCheck,
   RefreshCw
 } from 'lucide-react';
@@ -14,9 +13,9 @@ export default function WalletTopupModal({
   isOpen,
   onClose,
   wallet,
-  citizen,
   tierLimits,
-  onTopupSuccess
+  onTopupSuccess,
+  onUpdateWalletLimit
 }) {
   const [amount, setAmount] = useState('2000');
   const [gatewayMethod, setGatewayMethod] = useState('UPI'); // 'UPI', 'CARD', 'NETBANKING'
@@ -24,42 +23,96 @@ export default function WalletTopupModal({
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState('FORM'); // 'FORM', 'GATEWAY_SIMULATION', 'SUCCESS'
   const [txDetails, setTxDetails] = useState(null);
+  const [maxBalanceInput, setMaxBalanceInput] = useState(null);
+  const [savingLimit, setSavingLimit] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
   if (!isOpen) return null;
 
   const quickAmounts = ['500', '1000', '2000', '5000', '10000'];
 
-  const handleStartTopup = (e) => {
+  const configuredMaxBalance = Number(wallet.max_balance ?? tierLimits.max_balance);
+
+  const handleClose = () => {
+    if (loading) return;
+    setStep('FORM');
+    setTxDetails(null);
+    setFeedback(null);
+    onClose();
+  };
+
+  const handleSaveWalletLimit = async () => {
+    const newLimit = Number(maxBalanceInput ?? wallet.max_balance ?? tierLimits.max_balance);
+    if (!Number.isFinite(newLimit) || newLimit < wallet.total_balance) {
+      setFeedback({
+        type: 'error',
+        text: 'Your wallet limit cannot be lower than your current total balance.'
+      });
+      return;
+    }
+    if (newLimit > tierLimits.max_balance) {
+      setFeedback({
+        type: 'error',
+        text: `Your current KYC tier allows a maximum wallet balance of ₹${tierLimits.max_balance.toLocaleString('en-IN')}.`
+      });
+      return;
+    }
+
+    setSavingLimit(true);
+    setFeedback(null);
+    try {
+      await onUpdateWalletLimit(newLimit);
+      setFeedback({ type: 'success', text: 'Your wallet limit was saved.' });
+    } catch (error) {
+      setFeedback({ type: 'error', text: error.message || 'Could not save your wallet limit.' });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
+  const handleStartTopup = async (e) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount < 10) {
-      alert('Minimum top-up amount is ₹10.');
+      setFeedback({ type: 'error', text: 'Minimum top-up amount is ₹10.' });
       return;
     }
 
-    if (wallet.total_balance + numAmount > tierLimits.max_balance) {
-      alert(`Top-up would exceed your max balance limit of ₹${tierLimits.max_balance.toLocaleString('en-IN')}. Upgrade KYC tier.`);
+    if (wallet.total_balance + numAmount > configuredMaxBalance) {
+      setFeedback({
+        type: 'error',
+        text: `This top-up would exceed your configured wallet limit of ₹${configuredMaxBalance.toLocaleString('en-IN')}. Adjust your limit or upgrade KYC.`
+      });
       return;
     }
 
+    setFeedback(null);
     setStep('GATEWAY_SIMULATION');
     setLoading(true);
 
-    // Simulate Payment Gateway Intent + Signed Webhook confirmation (WAL-FR-02)
     setTimeout(() => {
-      setLoading(false);
-      const generatedTx = {
-        topup_id: `TOPUP-${Date.now().toString().slice(-6)}`,
+      const topupData = {
         business_ref: `PG-WEBHOOK-${Math.floor(100000 + Math.random() * 900000)}`,
         amount: numAmount,
         method: gatewayMethod,
         channel: gatewayMethod === 'UPI' ? upiId : 'HDFC Netbanking',
-        idempotency_key: `idem-pg-topup-${Math.random().toString(36).substring(2, 9)}`,
+        provider_reference: `PG-${Date.now()}`,
         timestamp: new Date().toISOString()
       };
-      setTxDetails(generatedTx);
-      setStep('SUCCESS');
-      onTopupSuccess(generatedTx);
+      Promise.resolve(onTopupSuccess(topupData))
+        .then((response) => {
+          setTxDetails({
+            ...topupData,
+            topup_id: response?.transaction_id || topupData.business_ref,
+            idempotency_key: response?.idempotency_key || 'Processed by wallet service'
+          });
+          setStep('SUCCESS');
+        })
+        .catch((error) => {
+          setStep('FORM');
+          setFeedback({ type: 'error', text: error.message || 'Top-up failed. Please try again.' });
+        })
+        .finally(() => setLoading(false));
     }, 1500);
   };
 
@@ -76,12 +129,17 @@ export default function WalletTopupModal({
               <small className="text-muted">Secure Payment Gateway</small>
             </div>
           </div>
-          <button className="btn-close" onClick={onClose}><X size={18} /></button>
+          <button className="btn-close" onClick={handleClose} disabled={loading}><X size={18} /></button>
         </div>
 
         {step === 'FORM' && (
           <form onSubmit={handleStartTopup}>
             <div className="modal-body">
+              {feedback && (
+                <div className={`alert-callout ${feedback.type}`} role="status">
+                  <span>{feedback.text}</span>
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Top-Up Amount (INR ₹)</label>
                 <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
@@ -105,7 +163,32 @@ export default function WalletTopupModal({
                   onChange={(e) => setAmount(e.target.value)}
                   required 
                 />
-                <div className="form-help">Max wallet headroom: ₹{(tierLimits.max_balance - wallet.total_balance).toLocaleString('en-IN')}</div>
+                <div className="form-help">Available headroom: ₹{Math.max(0, configuredMaxBalance - wallet.total_balance).toLocaleString('en-IN')}</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="wallet-max-balance">Personal wallet balance limit (₹)</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    id="wallet-max-balance"
+                    type="number"
+                    min={wallet.total_balance}
+                    max={tierLimits.max_balance}
+                    step="1"
+                    className="form-input"
+                    value={maxBalanceInput ?? wallet.max_balance ?? tierLimits.max_balance}
+                    onChange={(e) => setMaxBalanceInput(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleSaveWalletLimit}
+                    disabled={savingLimit}
+                  >
+                    {savingLimit ? 'Saving…' : 'Save limit'}
+                  </button>
+                </div>
+                <div className="form-help">You can set a lower personal cap up to your KYC tier maximum of ₹{tierLimits.max_balance.toLocaleString('en-IN')}.</div>
               </div>
 
               <div className="form-group">
@@ -155,10 +238,10 @@ export default function WalletTopupModal({
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
+              <button type="button" className="btn btn-secondary" onClick={handleClose} disabled={loading}>
                 Cancel
               </button>
-              <button type="submit" className="btn btn-primary">
+              <button type="submit" className="btn btn-primary" disabled={loading}>
                 Proceed to Gateway (₹{amount})
               </button>
             </div>
@@ -193,7 +276,7 @@ export default function WalletTopupModal({
               <div><strong>Event Published:</strong> <span className="badge badge-green">Wallet Credited</span></div>
             </div>
 
-            <button className="btn btn-primary btn-block" onClick={onClose}>
+            <button className="btn btn-primary btn-block" onClick={handleClose}>
               Done & Return to Wallet
             </button>
           </div>

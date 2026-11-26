@@ -43,7 +43,7 @@ export default function BankAccountManagementView({
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.account_holder_name.trim() || !formData.bank_name.trim()) {
       setFormError('Please enter Account Holder Name and Bank Name.');
@@ -75,10 +75,34 @@ export default function BankAccountManagementView({
       created_at: new Date().toISOString()
     };
 
-    onAddBankAccount(newAccount);
-    setIsModalOpen(false);
-    setSuccessMessage(`Bank account ending in ${last4} linked and verified successfully via automated Penny-Drop!`);
-    setTimeout(() => setSuccessMessage(null), 5000);
+    try {
+      await onAddBankAccount(newAccount);
+      setIsModalOpen(false);
+      setSuccessMessage(`Bank account ending in ${last4} linked and verified successfully via automated Penny-Drop!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (error) {
+      setFormError(error.message || 'Could not save this bank account.');
+    }
+  };
+
+  const handleSetDefault = async (accountId) => {
+    setFormError(null);
+    try {
+      await onSetDefaultBankAccount(accountId);
+      setSuccessMessage('Default payout account updated.');
+    } catch (error) {
+      setFormError(error.message || 'Could not update the default payout account.');
+    }
+  };
+
+  const handleDelete = async (accountId) => {
+    setFormError(null);
+    try {
+      await onDeleteBankAccount(accountId);
+      setSuccessMessage('Bank account removed.');
+    } catch (error) {
+      setFormError(error.message || 'Could not remove this bank account.');
+    }
   };
 
   return (
@@ -98,6 +122,12 @@ export default function BankAccountManagementView({
         <div className="alert-callout success" style={{ marginBottom: '20px' }}>
           <CheckCircle2 size={18} />
           <span>{successMessage}</span>
+        </div>
+      )}
+      {formError && !isModalOpen && (
+        <div className="alert-callout danger" role="alert" style={{ marginBottom: '20px' }}>
+          <AlertCircle size={18} />
+          <span>{formError}</span>
         </div>
       )}
 
@@ -174,7 +204,7 @@ export default function BankAccountManagementView({
                 {!account.is_primary ? (
                   <button 
                     className="link-btn"
-                    onClick={() => onSetDefaultBankAccount(account.id)}
+                    onClick={() => handleSetDefault(account.id)}
                     style={{ fontSize: '0.85rem', color: 'var(--primary-700)', fontWeight: 600 }}
                   >
                     Set as Default Payout
@@ -185,7 +215,7 @@ export default function BankAccountManagementView({
                   className="action-icon-btn danger" 
                   onClick={() => {
                     if (window.confirm('Are you sure you want to remove this bank account?')) {
-                      onDeleteBankAccount(account.id);
+                      handleDelete(account.id);
                     }
                   }}
                   title="Remove Account"

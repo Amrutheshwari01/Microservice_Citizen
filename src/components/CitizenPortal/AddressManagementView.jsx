@@ -86,7 +86,7 @@ export default function AddressManagementView({
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.locality_area || !formData.city_town || !formData.postal_code) {
       setFormError('Please enter locality, city/town, and postal PIN code.');
@@ -97,16 +97,39 @@ export default function AddressManagementView({
       return;
     }
 
-    if (editingAddressId) {
-      onUpdateAddress(editingAddressId, formData);
-      setSuccessMessage('Address updated successfully.');
-    } else {
-      onAddAddress(formData);
-      setSuccessMessage('New address added successfully.');
+    try {
+      if (editingAddressId) {
+        await onUpdateAddress(editingAddressId, formData);
+        setSuccessMessage('Address updated successfully.');
+      } else {
+        await onAddAddress(formData);
+        setSuccessMessage('New address added successfully.');
+      }
+      setIsModalOpen(false);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (error) {
+      setFormError(error.message || 'Could not save this address.');
     }
+  };
 
-    setIsModalOpen(false);
-    setTimeout(() => setSuccessMessage(null), 4000);
+  const handleSetDefault = async (addressId) => {
+    setFormError(null);
+    try {
+      await onSetDefaultAddress(addressId);
+      setSuccessMessage('Default address updated.');
+    } catch (error) {
+      setFormError(error.message || 'Could not update the default address.');
+    }
+  };
+
+  const handleDelete = async (addressId) => {
+    setFormError(null);
+    try {
+      await onDeleteAddress(addressId);
+      setSuccessMessage('Address removed.');
+    } catch (error) {
+      setFormError(error.message || 'Could not remove this address.');
+    }
   };
 
   const getTypeIcon = (type) => {
@@ -135,6 +158,12 @@ export default function AddressManagementView({
         <div className="alert-callout success" style={{ marginBottom: '20px' }}>
           <CheckCircle2 size={18} />
           <span>{successMessage}</span>
+        </div>
+      )}
+      {formError && !isModalOpen && (
+        <div className="alert-callout danger" role="alert" style={{ marginBottom: '20px' }}>
+          <AlertCircle size={18} />
+          <span>{formError}</span>
         </div>
       )}
 
@@ -195,7 +224,7 @@ export default function AddressManagementView({
                 {!addr.is_default ? (
                   <button 
                     className="link-btn" 
-                    onClick={() => onSetDefaultAddress(addr.id)}
+                    onClick={() => handleSetDefault(addr.id)}
                     style={{ fontSize: '0.82rem', color: 'var(--primary-700)', fontWeight: 600 }}
                   >
                     Set as Default
@@ -214,7 +243,7 @@ export default function AddressManagementView({
                     className="action-icon-btn danger" 
                     onClick={() => {
                       if (window.confirm('Are you sure you want to delete this address?')) {
-                        onDeleteAddress(addr.id);
+                        handleDelete(addr.id);
                       }
                     }}
                     title="Delete Address"

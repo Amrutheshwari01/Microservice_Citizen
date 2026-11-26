@@ -139,10 +139,12 @@ Never commit or paste database URLs, private keys, or application secrets into
 this repository.
 
 The deployment wiring does not by itself make every screen production-backed.
-The dashboard still initializes several profile, wallet, and admin views from
-`src/data/mockData.js`; payment top-up/cash-out and external KYC provider flows
-also need real provider integrations and end-to-end testing before handling
-client funds or sensitive identity documents.
+Authenticated profile, bank/address records, wallet balances, and wallet
+transactions are loaded from and saved to the backend. Several admin, consent,
+persona, and security views still use demo data. Top-up/cash-out endpoints do
+not connect to a real payment provider, and external KYC flows still need
+provider integrations and end-to-end testing before handling client funds or
+sensitive identity documents.
 
 ### Frontend Docker Image
 

@@ -6,7 +6,12 @@ from app.db.dependencies import get_db
 from app.api.v1.dependencies import get_current_citizen
 from app.models.citizen import Citizen
 from app.services.citizen_service import WalletService
-from app.schemas.wallet import TransferRequest, TopupRequest, CashoutRequest
+from app.schemas.wallet import (
+    TransferRequest,
+    TopupRequest,
+    CashoutRequest,
+    WalletLimitUpdateRequest,
+)
 
 router = APIRouter(prefix="/wallets", tags=["Wallet"])
 
@@ -24,6 +29,23 @@ def get_wallet(
     return {
         "success": True,
         "data": service.get_wallet_summary(citizen),
+    }
+
+
+@router.patch(
+    "/me/limit",
+    summary="Set personal wallet balance limit",
+    description="Sets a personal maximum balance that cannot exceed the citizen's KYC-tier ceiling.",
+)
+def update_wallet_limit(
+    req: WalletLimitUpdateRequest,
+    citizen: Citizen = Depends(get_current_citizen),
+    db: Session = Depends(get_db),
+):
+    service = WalletService(db)
+    return {
+        "success": True,
+        "data": service.update_wallet_max_balance(citizen, req),
     }
 
 
