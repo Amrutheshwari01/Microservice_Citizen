@@ -88,8 +88,8 @@ jobs:
       - name: Run tests
         run: python -m pytest -v tests/ --tb=short
 
-  docker-build:
-    name: Docker Build Validation
+  backend-docker-build:
+    name: Backend Docker Build
     runs-on: ubuntu-latest
     needs: test
 
@@ -108,6 +108,18 @@ jobs:
           push: false
           tags: agrilink-cis:${{ github.sha }}
 
+  frontend-docker-build:
+    name: Frontend Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build frontend Docker image
         uses: docker/build-push-action@v6
         with:
@@ -122,7 +134,7 @@ jobs:
   deploy:
     name: Deploy to AWS EC2
     runs-on: ubuntu-latest
-    needs: [frontend, test, docker-build]
+    needs: [frontend, test, backend-docker-build, frontend-docker-build]
 
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
