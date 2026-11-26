@@ -179,23 +179,35 @@ export default function App() {
   };
 
   const handleLoginSuccess = async () => {
-    const [
-      profileResponse,
-      walletResponse,
-      transactionsResponse,
-      holdsResponse,
-      historyResponse,
-      consentResponse,
-      sessionResponse
-    ] = await Promise.all([
+    const [profileResult, walletResult] = await Promise.allSettled([
       citizenService.getMyProfile(),
-      walletService.getWalletSummary(),
+      walletService.getWalletSummary()
+    ]);
+    if (profileResult.status === 'rejected' || walletResult.status === 'rejected') {
+      const failedRequest = profileResult.status === 'rejected'
+        ? { name: 'profile', error: profileResult.reason }
+        : { name: 'wallet', error: walletResult.reason };
+      const error = new Error(`Could not load your ${failedRequest.name}: ${failedRequest.error.message}`);
+      error.requestId = failedRequest.error.requestId;
+      throw error;
+    }
+
+    const profileResponse = profileResult.value;
+    const walletResponse = walletResult.value;
+    const optionalResults = await Promise.allSettled([
       getAllWalletTransactions().then(data => ({ data })),
       walletService.getHolds(),
       citizenService.getProfileHistory(),
       citizenService.getConsents(),
       citizenService.getActiveSessions()
     ]);
+    const optionalLabels = ['transaction history', 'escrow holds', 'profile history', 'consents', 'sessions'];
+    const optionalData = optionalResults.map(result => result.status === 'fulfilled' ? result.value : null);
+    const [transactionsResponse, holdsResponse, historyResponse, consentResponse, sessionResponse] = optionalData;
+    const failedOptionalRequests = optionalResults
+      .map((result, index) => result.status === 'rejected' ? { label: optionalLabels[index], error: result.reason } : null)
+      .filter(Boolean);
+
     const profile = profileResponse?.data;
     const walletData = walletResponse?.data;
     if (!profile || !walletData) {
@@ -271,6 +283,11 @@ export default function App() {
       issued_at: session.created_at,
       current: session.is_current
     })));
+    setOperationError(failedOptionalRequests.length
+      ? `Signed in, but could not load ${failedOptionalRequests.map(({ label }) => label).join(', ')}. Refresh the page to retry.${failedOptionalRequests.some(({ error }) => error.requestId)
+        ? ` Support reference(s): ${failedOptionalRequests.map(({ error }) => error.requestId).filter(Boolean).join(', ')}.`
+        : ''}`
+      : null);
     setLanguage(profile.preferred_language || 'en');
     setActiveSurface('CITIZEN');
     setActiveTab('dashboard');

@@ -6,6 +6,11 @@ import './HomePage.css';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
+const getErrorMessage = (error, fallback) => {
+  const message = error?.message || fallback;
+  return error?.requestId ? `${message} (Reference: ${error.requestId})` : message;
+};
+
 export default function HomePage({
   onLoginSuccess,
   onOpenRegister,
@@ -39,7 +44,7 @@ export default function HomePage({
       });
       setFeedback({ type: 'success', text: 'Signed in successfully.' });
     } catch (error) {
-      setFeedback({ type: 'error', text: error.message || 'Account data could not be loaded.' });
+      setFeedback({ type: 'error', text: getErrorMessage(error, 'Account data could not be loaded.') });
     }
   }, [identifier, onLoginSuccess]);
 
@@ -55,7 +60,7 @@ export default function HomePage({
       const response = await authService.loginWithGoogle(credential);
       await finishLogin(response, 'GOOGLE');
     } catch (error) {
-      setFeedback({ type: 'error', text: error.message || 'Google sign-in failed. Please try again.' });
+      setFeedback({ type: 'error', text: getErrorMessage(error, 'Google sign-in failed. Please try again.') });
     } finally {
       setLoading(false);
     }
@@ -124,7 +129,7 @@ export default function HomePage({
       const response = await authService.login(identifier, password);
       await finishLogin(response, 'PASSWORD');
     } catch (error) {
-      setFeedback({ type: 'error', text: error.message || 'Sign-in failed. Check your details and try again.' });
+      setFeedback({ type: 'error', text: getErrorMessage(error, 'Sign-in failed. Check your details and try again.') });
     } finally {
       setLoading(false);
     }
@@ -137,7 +142,7 @@ export default function HomePage({
       const response = await authService.loginWithFace(faceImage);
       await finishLogin(response, 'BIOMETRIC_FACE');
     } catch (error) {
-      setFeedback({ type: 'error', text: error.message || 'Face recognition failed. Please try again.' });
+      setFeedback({ type: 'error', text: getErrorMessage(error, 'Face recognition failed. Please try again.') });
     } finally {
       setLoading(false);
     }

@@ -96,6 +96,27 @@ npm run dev
 ```
 The application will be running locally at `http://localhost:5173/`.
 
+### Start the Local API and Database
+
+The frontend requires the FastAPI service and PostgreSQL database; the frontend
+dev server alone cannot create accounts or sign users in. Start Docker Desktop,
+then configure `backend/.env` from `backend/.env.example` if it does not already
+exist. For local development, set `CIS_DEV_DB_PASSWORD` and make sure
+`DATABASE_URL` uses the same password and points to `127.0.0.1:5433/cis_dev`.
+
+From the `backend/` directory, start the development database and API:
+
+```powershell
+docker compose --profile dev up -d cis-dev-db
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev up --build -d cis-api
+docker compose logs --tail 100 cis-api
+```
+
+The API container applies database migrations before starting. Confirm
+`http://localhost:8000/health` responds with `{"status":"ok"}`, then run
+`npm run dev` from `frontend/`. The Vite frontend defaults to this local API at
+`http://localhost:8000/api/v1`.
+
 ### Production Build
 ```bash
 npm run build

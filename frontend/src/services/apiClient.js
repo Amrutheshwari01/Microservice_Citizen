@@ -86,6 +86,7 @@ class ApiClient {
       error.status = response.status;
       error.code = data?.code || 'API_ERROR';
       error.details = data?.details;
+      error.requestId = data?.request_id || response.headers.get('X-Request-ID');
       throw error;
     }
 
