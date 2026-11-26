@@ -91,7 +91,7 @@ def verify_otp_endpoint(
     "/login",
     response_model=TokenResponse,
     summary="Authenticate Citizen",
-    description="Login using mobile, email, or citizen UUID and password. Returns JWT access & refresh tokens.",
+    description="Login using mobile, email, public Citizen ID, or citizen UUID and password. Returns JWT access & refresh tokens.",
 )
 def login(
     req: LoginRequest,

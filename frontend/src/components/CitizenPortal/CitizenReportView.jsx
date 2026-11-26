@@ -132,7 +132,7 @@ export default function CitizenReportView({ citizen, bankAccounts = [] }) {
             </div>
             <div className="report-details-grid">
               <ReportDetail label="Full name" value={citizen.full_name} />
-              <ReportDetail label="Citizen ID" value={citizen.citizen_id} mono />
+              <ReportDetail label="Citizen ID" value={citizen.public_citizen_id || citizen.citizen_id} mono />
               <ReportDetail label="Nationality" value={citizen.nationality || 'Not provided'} />
               <ReportDetail label="Date of birth" value={formatDate(citizen.date_of_birth)} />
               <ReportDetail label="Mobile" value={citizen.mobile || 'Not provided'} />
@@ -244,7 +244,10 @@ export default function CitizenReportView({ citizen, bankAccounts = [] }) {
                 <div className="citizen-card-info">
                   <span className="citizen-card-label">CARDHOLDER</span>
                   <h4>{citizen.full_name || 'Citizen'}</h4>
-                  <span className="citizen-card-id">{citizen.citizen_id}</span>
+                  <span className="citizen-card-id-label">AGRILINK CITIZEN ID</span>
+                  <span className="citizen-card-id">
+                    {citizen.public_citizen_id || citizen.citizen_id}
+                  </span>
                   <div className="citizen-card-fields">
                     <span><small>NATIONALITY</small>{citizen.nationality || 'Not provided'}</span>
                     <span><small>PROFILE TIER</small>{tierInfo.badge}</span>

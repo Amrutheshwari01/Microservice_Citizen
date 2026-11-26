@@ -11,6 +11,8 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     Numeric,
+    UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID, INET, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -24,9 +26,19 @@ if TYPE_CHECKING:
 
 class Citizen(Base):
     __tablename__ = "citizens"
+    __table_args__ = (
+        UniqueConstraint("public_citizen_id", name="uq_citizens_public_citizen_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    public_citizen_id: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        server_default=text(
+            "'AGL-CIT-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 24))"
+        ),
     )
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
     email_normalized: Mapped[Optional[str]] = mapped_column(

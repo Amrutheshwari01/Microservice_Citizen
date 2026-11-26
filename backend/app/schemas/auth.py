@@ -83,6 +83,7 @@ class CitizenRegisterResponse(BaseModel):
     success: bool = True
     message: str
     citizen_id: uuid.UUID
+    public_citizen_id: str
     full_name: str
     email: Optional[str] = None
     mobile: Optional[str] = None
@@ -147,6 +148,7 @@ class TokenResponse(BaseModel):
     token_type: str = "Bearer"
     expires_in: int
     citizen_id: uuid.UUID
+    public_citizen_id: str
     full_name: str
     email: Optional[str] = None
     mobile: Optional[str] = None
@@ -203,6 +205,7 @@ class FaceMatchResponse(BaseModel):
     token_type: str = "Bearer"
     expires_in: int = 3600
     citizen_id: Optional[uuid.UUID] = None
+    public_citizen_id: Optional[str] = None
     full_name: Optional[str] = None
     email: Optional[str] = None
     mobile: Optional[str] = None

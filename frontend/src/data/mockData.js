@@ -2,6 +2,7 @@
 
 export const INITIAL_CITIZEN = {
   citizen_id: "CIT-8829-4102",
+  public_citizen_id: "AGL-CIT-7C4E9A2B1D6F0385A4C9B201",
   full_name: "Rameshwar Patel",
   email: "ramesh.patel@agrilink.in",
   mobile: "+91 98765 43210",

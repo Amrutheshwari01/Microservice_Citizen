@@ -4,6 +4,10 @@ from typing import Optional, List
 from sqlalchemy import select, update, and_
 from sqlalchemy.orm import Session
 
+from app.core.identifiers import (
+    PUBLIC_CITIZEN_ID_PATTERN,
+    generate_public_citizen_id,
+)
 from app.models.citizen import (
     Citizen,
     CitizenProfile,
@@ -27,6 +31,12 @@ class CitizenRepository:
         stmt = select(Citizen).where(Citizen.email_normalized == email.strip().lower())
         return self.db.scalars(stmt).first()
 
+    def get_by_public_citizen_id(self, public_citizen_id: str) -> Optional[Citizen]:
+        stmt = select(Citizen).where(
+            Citizen.public_citizen_id == public_citizen_id.strip().upper()
+        )
+        return self.db.scalars(stmt).first()
+
     def get_by_mobile(self, mobile: str) -> Optional[Citizen]:
         stmt = select(Citizen).where(Citizen.mobile_e164 == mobile.strip())
         return self.db.scalars(stmt).first()
@@ -41,6 +51,9 @@ class CitizenRepository:
                 return c
         except ValueError:
             pass
+
+        if PUBLIC_CITIZEN_ID_PATTERN.fullmatch(cleaned):
+            return self.get_by_public_citizen_id(cleaned)
 
         # Check if email
         if "@" in cleaned:
@@ -58,6 +71,7 @@ class CitizenRepository:
     ) -> Citizen:
         citizen = Citizen(
             id=uuid.uuid4(),
+            public_citizen_id=generate_public_citizen_id(),
             full_name=full_name.strip(),
             email_normalized=email.strip().lower() if email else None,
             mobile_e164=mobile.strip() if mobile else None,

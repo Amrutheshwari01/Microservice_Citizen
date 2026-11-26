@@ -46,7 +46,9 @@ export default function CitizenDashboard({
         <div className="welcome-text">
           <div className="citizen-badge-row">
             <span className="badge badge-green">Verified Citizen</span>
-            <span className="badge badge-blue">Single ID: {citizen.citizen_id}</span>
+            <span className="badge badge-blue">
+              Citizen ID: {citizen.public_citizen_id || citizen.citizen_id}
+            </span>
             <span className="badge badge-purple">Active Persona: {citizen.active_persona}</span>
           </div>
           <h2>Welcome back, {citizen.full_name}</h2>

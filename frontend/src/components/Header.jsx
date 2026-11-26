@@ -214,7 +214,9 @@ export default function Header({
                 <div className="user-details">
                   <span className="user-name">{citizen.full_name}</span>
                   <div className="user-sub">
-                    <span className="citizen-id-badge font-mono">{citizen.citizen_id}</span>
+                    <span className="citizen-id-badge font-mono">
+                      {citizen.public_citizen_id || citizen.citizen_id}
+                    </span>
                     <span 
                       className="tier-mini-badge" 
                       style={{ backgroundColor: tierInfo.color }}

@@ -14,6 +14,9 @@ export const INDIAN_PATTERNS = {
   // Standard Email
   EMAIL: /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/,
 
+  // AgriLink-issued public citizen identifier; not a government ID number
+  CITIZEN_ID: /^AGL-CIT-[0-9A-F]{24}$/i,
+
   // PAN Card: 5 uppercase letters (4th is status P/C/H/F/A/T/B/L/J/G), 4 digits, 1 uppercase letter
   PAN: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
 

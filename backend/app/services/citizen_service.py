@@ -61,6 +61,7 @@ class CitizenService:
 
         return {
             "citizen_id": citizen.id,
+            "public_citizen_id": citizen.public_citizen_id,
             "full_name": citizen.full_name,
             "email": citizen.email_normalized,
             "mobile": citizen.mobile_e164,

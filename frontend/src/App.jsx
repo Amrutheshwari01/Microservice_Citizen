@@ -298,7 +298,9 @@ export default function App() {
   const handleRegisterSuccess = (account) => {
     const identifier = account.email || account.mobile || '';
     setRegisteredIdentifier(identifier);
-    setRegistrationNotice('Account created. Sign in with your email or mobile number and password.');
+    setRegistrationNotice(
+      `Account created. Your AgriLink Citizen ID is ${account.public_citizen_id}. Sign in with your email, mobile number, or Citizen ID and password.`
+    );
     setIsLoggedIn(false);
     setActiveSurface('CITIZEN');
     setActiveTab('dashboard');

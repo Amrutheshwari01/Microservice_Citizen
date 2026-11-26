@@ -23,7 +23,7 @@ export const authService = {
   },
 
   /**
-   * Login using Email, Mobile, or Citizen UUID + Password
+   * Login using email, mobile, public Citizen ID, or Citizen UUID + password.
    */
   async login(identifier, password) {
     const res = await apiClient.post('/auth/login', {

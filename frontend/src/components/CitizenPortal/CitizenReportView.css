@@ -376,10 +376,21 @@
 }
 
 .citizen-card-id {
+  display: block;
+  overflow-wrap: anywhere;
   color: #d1fae5;
   font-family: var(--font-mono);
   font-size: 0.79rem;
   letter-spacing: 0.04em;
+}
+
+.citizen-card-id-label {
+  display: block;
+  margin-top: 10px;
+  color: #a7f3d0;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
 }
 
 .citizen-card-fields {

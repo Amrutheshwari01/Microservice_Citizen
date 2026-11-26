@@ -305,7 +305,9 @@ export default function ProfileKycView({
 
           <div style={{ textAlign: 'right' }}>
             <span className="text-muted" style={{ fontSize: '0.8rem' }}>Citizen Identifier</span>
-            <div className="font-mono text-bold" style={{ fontSize: '1.1rem' }}>{citizen.citizen_id}</div>
+            <div className="font-mono text-bold" style={{ fontSize: '1.1rem' }}>
+              {citizen.public_citizen_id || citizen.citizen_id}
+            </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
               {kycStatus?.submitted_at
                 ? `Submitted: ${new Date(kycStatus.submitted_at).toLocaleDateString()}`

@@ -65,6 +65,7 @@ class ProfileUpdateRequest(BaseModel):
 
 class ProfileResponse(BaseModel):
     citizen_id: uuid.UUID
+    public_citizen_id: str
     full_name: str
     email: Optional[str]
     mobile: Optional[str]

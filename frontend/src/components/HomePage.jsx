@@ -203,14 +203,14 @@ export default function HomePage({
 
         {activeMethod === 'password' && (
           <form className="signin-form" onSubmit={handlePasswordSubmit}>
-            <label htmlFor="signin-identifier">Email or mobile number</label>
+            <label htmlFor="signin-identifier">Email, mobile, or Citizen ID</label>
             <div className="signin-input-wrap">
               <UserRound size={18} aria-hidden="true" />
               <input
                 id="signin-identifier"
                 type="text"
                 autoComplete="username"
-                placeholder="Enter your email or mobile"
+                placeholder="Enter your email, mobile, or AGL-CIT ID"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 required
