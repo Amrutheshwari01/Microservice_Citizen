@@ -41,11 +41,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # Expose port
 EXPOSE 8000
 
-# Uvicorn – 2 workers suitable for a single vCPU container.
+# Apply schema migrations before serving requests, including when the image is
+# started directly rather than through docker-compose.
+# Uvicorn – a single worker, suitable for a single-vCPU container.
 # For multi-core ECS tasks, increase --workers to (2 × vCPUs) + 1.
-CMD ["python", "-m", "uvicorn", "app.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1", \
-     "--loop", "uvloop", \
-     "--access-log"]
+CMD ["sh", "-c", \
+     "python -m alembic upgrade head && exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1 --loop uvloop --access-log"]

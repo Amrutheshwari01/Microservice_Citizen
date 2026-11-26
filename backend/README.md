@@ -207,6 +207,9 @@ docker compose logs -f cis-api
 docker compose down
 ```
 
+The image's default command applies pending Alembic migrations before starting
+the API, including when it is run directly outside Docker Compose.
+
 ## Database Migrations
 
 The database schema is managed with Alembic. `create_all()` is only retained by
