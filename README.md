@@ -85,7 +85,8 @@ The frontend implements **both surfaces** defined in Section 5.1 of the SRS spec
 git clone <your-repo-url>
 cd Microservice_Citizen
 
-# Install dependencies
+# Install frontend dependencies
+cd frontend
 npm install
 ```
 
@@ -99,7 +100,8 @@ The application will be running locally at `http://localhost:5173/`.
 ```bash
 npm run build
 ```
-Generates optimized, minified production assets into the `dist/` folder.
+Run these frontend commands from the `frontend/` directory. The production build
+generates optimized, minified assets in `frontend/dist/`.
 
 ### Google Sign-In
 

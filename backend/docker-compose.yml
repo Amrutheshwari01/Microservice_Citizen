@@ -52,7 +52,7 @@ services:
   cis-frontend:
     build:
       context: ..
-      dockerfile: Dockerfile
+      dockerfile: frontend/Dockerfile
       args:
         VITE_API_BASE_URL: /api/v1
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
