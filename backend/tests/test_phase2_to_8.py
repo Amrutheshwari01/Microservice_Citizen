@@ -188,7 +188,7 @@ class TestProfile:
         saved_wallet = client.get(
             "/api/v1/wallets/me", headers=_auth_headers(relogin_token)
         ).json()["data"]
-        assert saved_wallet["max_balance"] == "5000"
+        assert Decimal(saved_wallet["max_balance"]) == Decimal("5000")
         assert saved_wallet["available_balance"] == "5000.0000"
 
     def test_unauthenticated_profile_returns_401(self):
